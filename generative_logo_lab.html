@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Generative Logo Lab — CSS / Canvas / WebGL</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#101114;color:#f4f4f5;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  body{overflow:hidden}
+  .deck{height:100vh;position:relative}
+  .slide{position:absolute;inset:0;padding:5vh 6vw;display:none;overflow:auto}
+  .slide.active{display:block}
+  .eyebrow{font-size:.75rem;letter-spacing:.18em;text-transform:uppercase;color:#8d93a1;margin-bottom:1rem}
+  h1{font-size:clamp(2.5rem,6vw,6rem);line-height:.98;margin:0 0 1.5rem;max-width:1000px}
+  h2{font-size:clamp(2rem,4vw,4rem);margin:0 0 1rem}
+  h3{margin:.3rem 0 .7rem}
+  p{color:#b9bdc7;line-height:1.7;max-width:850px}
+  .lead{font-size:1.15rem}
+  .tag{display:inline-block;border:1px solid #363a44;border-radius:999px;padding:.35rem .7rem;color:#c9cdd5;margin:.2rem}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px}
+  .card,.demo{background:#181a1f;border:1px solid #2b2e36;border-radius:18px;padding:20px}
+  .demo{min-height:340px;position:relative;overflow:hidden}
+  .demo-stage{height:250px;border-radius:12px;background:#0b0c0f;display:grid;place-items:center;overflow:hidden}
+  .demo-stage canvas{width:100%;height:100%;display:block}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0c0d10;border:1px solid #292c34;border-radius:12px;padding:16px;overflow:auto;font-size:.8rem;line-height:1.55;color:#d9dce3}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  .flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:28px 0}
+  .flow span{padding:.7rem 1rem;border:1px solid #3a3e49;border-radius:12px;background:#181a1f}
+  .arrow{color:#777d89}
+  .compare td,.compare th{padding:14px;border-bottom:1px solid #2b2e36;text-align:left}
+  .compare{width:100%;border-collapse:collapse;margin-top:25px}
+  .controls{display:flex;gap:14px;align-items:center;margin-top:12px}
+  input[type=range]{width:150px}
+  button{background:#f4f4f5;color:#101114;border:0;border-radius:9px;padding:.55rem .9rem;font-weight:650;cursor:pointer}
+  .css-logo{width:150px;height:150px;position:relative}
+  .css-logo i{position:absolute;width:70px;height:70px;border:7px solid #f4f4f5;border-radius:50%;left:40px;top:40px;transition:.15s}
+  .css-logo i:nth-child(1){transform:translateY(-35px)}
+  .css-logo i:nth-child(2){transform:translate(31px,-18px)}
+  .css-logo i:nth-child(3){transform:translate(31px,18px)}
+  .css-logo i:nth-child(4){transform:translateY(35px)}
+  .css-logo i:nth-child(5){transform:translate(-31px,18px)}
+  .css-logo i:nth-child(6){transform:translate(-31px,-18px)}
+  .note{font-size:.9rem;color:#8d93a1}
+  .nav{position:fixed;right:24px;bottom:22px;z-index:10;display:flex;gap:8px}
+  .counter{position:fixed;left:24px;bottom:25px;color:#777d89;font-size:.85rem;z-index:10}
+  .key{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);color:#777d89;font-size:.75rem;z-index:10}
+  .hero-art{height:55vh;border-radius:24px;border:1px solid #2b2e36;background:#0b0c0f;position:relative;overflow:hidden}
+  #heroCanvas{width:100%;height:100%;display:block}
+  @media(max-width:800px){.grid,.split{grid-template-columns:1fr}.slide{padding:6vh 5vw}.key{display:none}}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<section class="slide active">
+  <div class="eyebrow">Generative Logo Lab / 01</div>
+  <h1>コードから<br>ロゴを生成する</h1>
+  <p class="lead">Pure CSS / HTML Canvas + JavaScript / WebGL + GLSL を、同じ教材の中で比較する。</p>
+  <div class="hero-art"><canvas id="heroCanvas"></canvas></div>
+  <p class="note">↑ ↓ または ← → でスライド移動 / Rでデモをリセット</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">02 / Three approaches</div>
+  <h2>同じ「ロゴ」でも、<br>計算する場所が違う</h2>
+  <div class="grid">
+    <div class="card"><h3>Pure CSS</h3><p>HTML要素とCSSの transform / border / clip-path などで形を構成。</p><span class="tag">DOM</span><span class="tag">2D</span></div>
+    <div class="card"><h3>Canvas + JS</h3><p>JavaScriptで座標・線・粒子を計算し、Canvasへ描画。</p><span class="tag">CPU</span><span class="tag">2D</span></div>
+    <div class="card"><h3>WebGL + GLSL</h3><p>GPU上で頂点やピクセルを大量に並列計算。GLSLがシェーダー言語。</p><span class="tag">GPU</span><span class="tag">2D / 3D</span></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">03 / Pure CSS</div>
+  <h2>CSS：円を重ねて<br>幾何学ロゴを作る</h2>
+  <div class="split">
+    <div class="demo"><div class="demo-stage">
+      <div class="css-logo" id="cssLogo"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="controls"><label>回転 <input id="cssRange" type="range" min="0" max="360" value="0"></label></div>
+    </div>
+    <pre>&lt;div class="logo"&gt;
+  &lt;i&gt;&lt;/i&gt; ... × 6
+&lt;/div&gt;
+
+.logo i {
+  width: 70px;
+  height: 70px;
+  border: 7px solid white;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.logo i:nth-child(1) {
+  transform: translateY(-35px);
+}</pre>
+  </div>
+  <p>CSSは「形を部品として組み立てる」のが得意。規則的なエンブレム、タイポグラフィ、UI上の装飾に向く。</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">04 / Canvas + JavaScript</div>
+  <h2>Canvas：座標と数式から<br>線を生成する</h2>
+  <div class="split">
+    <div class="demo"><div class="demo-stage"><canvas id="canvasDemo"></canvas></div>
+      <div class="controls">
+        <label>乱れ <input id="noiseRange" type="range" min="0" max="50" value="12"></label>
+        <button id="canvasReset">再生成</button>
+      </div>
+    </div>
+    <pre>for (let i = 0; i &lt; 180; i++) {
+  const a = i * Math.PI * 2 / 180;
+
+  const r1 = 80 + noise();
+  const r2 = 150 + noise();
+
+  const x1 = cx + Math.cos(a) * r1;
+  const y1 = cy + Math.sin(a) * r1;
+
+  const x2 = cx + Math.cos(a + 1.2) * r2;
+  const y2 = cy + Math.sin(a + 1.2) * r2;
+
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}</pre>
+  </div>
+  <p>Canvasでは「点 → 座標 → 線」という発想がそのまま見える。ジェネラティブアートの入り口として理解しやすい。</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">05 / WebGL</div>
+  <h2>WebGL：GPUに<br>大量の計算を任せる</h2>
+  <div class="flow">
+    <span>HTML Canvas</span><b class="arrow">→</b><span>WebGL Context</span><b class="arrow">→</b><span>Shader</span><b class="arrow">→</b><span>GPU</span><b class="arrow">→</b><span>Pixels</span>
+  </div>
+  <p>前の例で「WebGLが動かない」原因になりやすいのは、GLSLだけを書いてもWebGLの実行環境は完成しないこと。実際には shader のコンパイル、program のリンク、buffer、uniform、draw call まで接続する必要がある。</p>
+  <div class="flow">
+    <span>Vertex Shader</span><b class="arrow">+</b><span>Fragment Shader</span><b class="arrow">=</b><span>WebGL Program</span>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">06 / Working WebGL</div>
+  <h2>まず「動く最小構成」を作る</h2>
+  <div class="split">
+    <div class="demo"><div class="demo-stage"><canvas id="glDemo"></canvas></div>
+      <div class="controls"><label>速度 <input id="glSpeed" type="range" min="0" max="200" value="60"></label></div>
+      <p class="note" id="glStatus">WebGLを初期化中…</p>
+    </div>
+    <pre>// Fragment Shader
+precision mediump float;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy
+          / u_resolution;
+
+  vec2 p = uv - 0.5;
+  p.x *= u_resolution.x
+       / u_resolution.y;
+
+  float d = length(p);
+  d += sin(p.x * 12.0
+         + u_time) * 0.025;
+
+  float alpha = 1.0
+              - smoothstep(.20, .205, d);
+
+  gl_FragColor =
+    vec4(vec3(alpha), 1.0);
+}</pre>
+  </div>
+  <p>このデモは外部ライブラリなし。Canvas → WebGL → shader → buffer → uniform → draw の一連の流れを実装している。</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">07 / GLSL</div>
+  <h2>数学を足すと<br>ロゴが「生成」される</h2>
+  <div class="grid">
+    <div class="card"><h3>distance()</h3><p>中心や図形との距離を求める。円・球・輪郭の基本。</p></div>
+    <div class="card"><h3>sin() / cos()</h3><p>周期的な揺らぎを作る。波、回転、変形、アニメーション。</p></div>
+    <div class="card"><h3>smoothstep()</h3><p>境界を滑らかにする。ロゴの輪郭やグローに使える。</p></div>
+  </div>
+  <pre>float d = distance(uv, vec2(0.5));
+d += sin(uv.x * 20.0 + u_time) * 0.02;
+
+float shape =
+  1.0 - smoothstep(0.25, 0.255, d);</pre>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">08 / Generative Logo</div>
+  <h2>円 → ノイズ →<br>有機的なロゴ</h2>
+  <div class="split">
+    <div class="demo"><div class="demo-stage"><canvas id="fluidCanvas"></canvas></div>
+      <div class="controls"><label>変形 <input id="fluidRange" type="range" min="0" max="100" value="35"></label></div>
+    </div>
+    <div>
+      <p>「完成した画像」を置くのではなく、輪郭を数式で定義する。</p>
+      <pre>distance
+   ↓
+sin / noise
+   ↓
+smoothstep
+   ↓
+fragment shader
+   ↓
+animated logo</pre>
+      <p>時間 <code>u_time</code> を加えれば、同じロゴが呼吸するように変形する。</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">09 / Particle Logo</div>
+  <h2>粒子がロゴを<br>「形成する」</h2>
+  <div class="demo"><div class="demo-stage"><canvas id="particleCanvas"></canvas></div>
+    <div class="controls"><label>拡散 <input id="particleRange" type="range" min="0" max="100" value="30"></label></div>
+  </div>
+  <p>Canvasなら数千粒子から始めると仕組みを理解しやすい。WebGLなら粒子数を大幅に増やし、GPUで処理する方向へ発展できる。</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">10 / Roman Sculpture</div>
+  <h2>「困ったら顔」<br>を作品にする</h2>
+  <p class="lead">ローマ彫刻の顔は、生成表現の題材として強い。輪郭・陰影・粒子・ノイズ・光の変化が一つのモチーフに集約できる。</p>
+  <div class="flow">
+    <span>3D Face</span><b class="arrow">→</b><span>Three.js</span><b class="arrow">→</b><span>WebGL</span><b class="arrow">→</b><span>GLSL</span><b class="arrow">→</b><span>Particles / Light / Noise</span>
+  </div>
+  <p>最終作品では「静止画の顔」ではなく、<strong>粒子から顔が現れ、マウス操作で崩れ、時間とともに再構築されるロゴ</strong>を目標にすると、WebGLを学ぶ理由が明確になる。</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">11 / React × WebGL</div>
+  <h2>仕事の技術へ<br>つなげる</h2>
+  <div class="flow">
+    <span>React</span><b class="arrow">→</b><span>Three.js</span><b class="arrow">→</b><span>WebGL</span><b class="arrow">→</b><span>GLSL</span>
+  </div>
+  <pre>function GenerativeLogo({
+  speed,
+  noise,
+  mouseInteraction
+}) {
+  return (
+    &lt;WebGLCanvas
+      speed={speed}
+      noise={noise}
+      interactive={mouseInteraction}
+    /&gt;
+  );
+}</pre>
+  <p>ReactはUI・状態・コンポーネントを管理し、Three.js / WebGL側は描画を担当する。これなら「WebGL作品」と「フロントエンド実装」を別物にせず扱える。</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">12 / Comparison</div>
+  <h2>3つの技術を<br>一枚で比較する</h2>
+  <table class="compare">
+    <tr><th></th><th>Pure CSS</th><th>Canvas + JS</th><th>WebGL + GLSL</th></tr>
+    <tr><th>基本単位</th><td>DOM / CSS</td><td>2D座標</td><td>頂点 / ピクセル</td></tr>
+    <tr><th>得意</th><td>UI・幾何学</td><td>線・粒子</td><td>大量計算・3D・シェーダー</td></tr>
+    <tr><th>生成表現</th><td>★★</td><td>★★★★</td><td>★★★★★</td></tr>
+    <tr><th>学習難度</th><td>★</td><td>★★</td><td>★★★★</td></tr>
+    <tr><th>代表的な作品</th><td>幾何学ロゴ</td><td>粒子・軌跡</td><td>流体・光・3D彫刻</td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">13 / Final</div>
+  <h2>ロゴを「描く」から、<br>「生成する」へ。</h2>
+  <p class="lead">CSSは形を組み立てる。Canvasは座標を操作する。WebGLはGPUで大量の計算をする。GLSLは、その計算そのものをデザインする。</p>
+  <div class="flow">
+    <span>Shape</span><b class="arrow">→</b><span>Math</span><b class="arrow">→</b><span>Noise</span><b class="arrow">→</b><span>Time</span><b class="arrow">→</b><span>Interaction</span>
+  </div>
+  <p>次の制作課題：<strong>「粒子からローマ彫刻の顔が生成されるインタラクティブ・ロゴ」</strong></p>
+</section>
+
+<div class="counter" id="counter">1 / 13</div>
+<div class="key">← → / ↑ ↓ で移動　・　Rでデモをリセット</div>
+<div class="nav"><button id="prev">←</button><button id="next">→</button></div>
+</div>
+
+<script>
+/* ---------- Slide navigation ---------- */
+const slides=[...document.querySelectorAll(".slide")];
+let current=0;
+function show(n){
+  current=(n+slides.length)%slides.length;
+  slides.forEach((s,i)=>s.classList.toggle("active",i===current));
+  document.querySelector("#counter").textContent=`${current+1} / ${slides.length}`;
+}
+document.querySelector("#prev").onclick=()=>show(current-1);
+document.querySelector("#next").onclick=()=>show(current+1);
+addEventListener("keydown",e=>{
+  if(["ArrowRight","ArrowDown","PageDown"," "].includes(e.key)){e.preventDefault();show(current+1)}
+  if(["ArrowLeft","ArrowUp","PageUp"].includes(e.key)){e.preventDefault();show(current-1)}
+  if(e.key.toLowerCase()==="r"){resetDemos()}
+});
+
+/* ---------- CSS demo ---------- */
+const cssLogo=document.querySelector("#cssLogo");
+document.querySelector("#cssRange").oninput=e=>{
+  cssLogo.style.transform=`rotate(${e.target.value}deg)`;
+};
+
+/* ---------- Canvas helpers ---------- */
+function setupCanvas(c){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const r=c.getBoundingClientRect();
+  c.width=Math.max(1,r.width*dpr);
+  c.height=Math.max(1,r.height*dpr);
+  const ctx=c.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w:r.width,h:r.height};
+}
+function drawRadial(){
+  const c=document.querySelector("#canvasDemo");
+  const {ctx,w,h}=setupCanvas(c);
+  ctx.clearRect(0,0,w,h);
+  const cx=w/2,cy=h/2;
+  const noise=+document.querySelector("#noiseRange").value;
+  ctx.strokeStyle="#f4f4f5";
+  ctx.lineWidth=1;
+  for(let i=0;i<220;i++){
+    const a=i*Math.PI*2/220;
+    const n=(Math.random()-.5)*noise;
+    const r1=Math.min(w,h)*.22+n;
+    const r2=Math.min(w,h)*.42+n;
+    const x1=cx+Math.cos(a)*r1, y1=cy+Math.sin(a)*r1;
+    const x2=cx+Math.cos(a+1.15)*r2, y2=cy+Math.sin(a+1.15)*r2;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  }
+}
+document.querySelector("#noiseRange").oninput=drawRadial;
+document.querySelector("#canvasReset").onclick=drawRadial;
+
+/* ---------- Particle demo ---------- */
+let particleSeed=0;
+function drawParticles(){
+  const c=document.querySelector("#particleCanvas");
+  const {ctx,w,h}=setupCanvas(c);
+  const spread=+document.querySelector("#particleRange").value;
+  const cx=w/2,cy=h/2;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#f4f4f5";
+  let seed=particleSeed++;
+  for(let i=0;i<1800;i++){
+    const a=i*.37;
+    const r=(i/1800)*Math.min(w,h)*.42;
+    const jitter=(Math.sin(i*12.9898+seed)*.5)*spread;
+    const x=cx+Math.cos(a)*r+jitter;
+    const y=cy+Math.sin(a)*r+jitter;
+    const size=1+(i%3)*.35;
+    ctx.fillRect(x,y,size,size);
+  }
+}
+document.querySelector("#particleRange").oninput=drawParticles;
+
+/* ---------- WebGL ---------- */
+const vsSource=`
+attribute vec2 a_position;
+void main(){
+  gl_Position=vec4(a_position,0.0,1.0);
+}`;
+const fsSource=`
+precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_distort;
+
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=uv-0.5;
+  p.x*=u_resolution.x/u_resolution.y;
+
+  float d=length(p);
+  d += sin(p.x*18.0+u_time*1.2)*0.018*u_distort;
+  d += sin(p.y*23.0-u_time*.8)*0.012*u_distort;
+
+  float shape=1.0-smoothstep(.215,.225,d);
+  float ring=1.0-smoothstep(.012,.020,abs(d-.17));
+
+  vec3 bg=vec3(.035,.04,.05);
+  vec3 fg=vec3(.95,.95,.96);
+  gl_FragColor=vec4(mix(bg,fg,max(shape,ring)),1.0);
+}`;
+
+function createShader(gl,type,source){
+  const s=gl.createShader(type);
+  gl.shaderSource(s,source);
+  gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+function createProgram(gl,vs,fs){
+  const p=gl.createProgram();
+  gl.attachShader(p,vs);gl.attachShader(p,fs);gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+function initGL(){
+  const canvas=document.querySelector("#glDemo");
+  const gl=canvas.getContext("webgl",{antialias:false});
+  const status=document.querySelector("#glStatus");
+  if(!gl){status.textContent="WebGLを利用できません。ブラウザまたはGPU設定を確認してください。";return null}
+  try{
+    const program=createProgram(gl,createShader(gl,gl.VERTEX_SHADER,vsSource),createShader(gl,gl.FRAGMENT_SHADER,fsSource));
+    const buffer=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+    const pos=gl.getAttribLocation(program,"a_position");
+    const resolution=gl.getUniformLocation(program,"u_resolution");
+    const time=gl.getUniformLocation(program,"u_time");
+    const distort=gl.getUniformLocation(program,"u_distort");
+    status.textContent=`WebGL OK / ${gl.getParameter(gl.RENDERER)}`;
+    let start=performance.now();
+    function resize(){
+      const dpr=Math.min(devicePixelRatio||1,2);
+      const r=canvas.getBoundingClientRect();
+      canvas.width=Math.max(1,r.width*dpr);canvas.height=Math.max(1,r.height*dpr);
+      gl.viewport(0,0,canvas.width,canvas.height);
+    }
+    function frame(now){
+      resize();
+      gl.useProgram(program);
+      gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+      gl.enableVertexAttribArray(pos);
+      gl.vertexAttribPointer(pos,2,gl.FLOAT,false,0,0);
+      gl.uniform2f(resolution,canvas.width,canvas.height);
+      gl.uniform1f(time,(now-start)/1000*(+document.querySelector("#glSpeed").value/60));
+      gl.uniform1f(distort,1.0);
+      gl.drawArrays(gl.TRIANGLES,0,6);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    return {reset:()=>{start=performance.now()}};
+  }catch(e){
+    status.textContent="Shader / Program error: "+e.message;
+    return null;
+  }
+}
+const glApp=initGL();
+
+/* ---------- Fluid demo: reuse WebGL with separate shader ---------- */
+function initFluid(){
+  const canvas=document.querySelector("#fluidCanvas");
+  const gl=canvas.getContext("webgl",{antialias:false});
+  if(!gl)return;
+  const fs=`
+  precision mediump float;
+  uniform vec2 u_resolution;
+  uniform float u_time;
+  uniform float u_amount;
+  void main(){
+    vec2 uv=gl_FragCoord.xy/u_resolution;
+    vec2 p=uv-.5;
+    p.x*=u_resolution.x/u_resolution.y;
+    float a=atan(p.y,p.x);
+    float r=length(p);
+    float wobble=sin(a*7.0+u_time)*.025*u_amount
+                +sin(a*13.0-u_time*.7)*.012*u_amount;
+    float edge=1.0-smoothstep(.24,.25,r-wobble);
+    float glow=1.0-smoothstep(.0,.08,abs(r-(.20+wobble)));
+    vec3 c=mix(vec3(.04),vec3(.95),max(edge*.9,glow));
+    gl_FragColor=vec4(c,1.);
+  }`;
+  try{
+    const p=createProgram(gl,createShader(gl,gl.VERTEX_SHADER,vsSource),createShader(gl,gl.FRAGMENT_SHADER,fs));
+    const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+    const pos=gl.getAttribLocation(p,"a_position"),res=gl.getUniformLocation(p,"u_resolution"),time=gl.getUniformLocation(p,"u_time"),amt=gl.getUniformLocation(p,"u_amount");
+    function frame(now){
+      const dpr=Math.min(devicePixelRatio||1,2),r=canvas.getBoundingClientRect();
+      canvas.width=Math.max(1,r.width*dpr);canvas.height=Math.max(1,r.height*dpr);
+      gl.viewport(0,0,canvas.width,canvas.height);gl.useProgram(p);
+      gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.enableVertexAttribArray(pos);gl.vertexAttribPointer(pos,2,gl.FLOAT,false,0,0);
+      gl.uniform2f(res,canvas.width,canvas.height);gl.uniform1f(time,now*.001);
+      gl.uniform1f(amt,+document.querySelector("#fluidRange").value/35);
+      gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }catch(e){console.warn(e)}
+}
+document.querySelector("#fluidRange").oninput=()=>{};
+initFluid();
+
+/* ---------- Hero animation ---------- */
+function hero(){
+  const c=document.querySelector("#heroCanvas"),{ctx,w,h}=setupCanvas(c);
+  const cx=w/2,cy=h/2,t=performance.now()*.001;
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle="rgba(244,244,245,.75)";
+  for(let i=0;i<150;i++){
+    const a=i*Math.PI*2/150+t*.15;
+    const r1=Math.min(w,h)*.18+Math.sin(i*.8+t)*10;
+    const r2=Math.min(w,h)*.38+Math.sin(i*.35-t)*20;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+    ctx.lineTo(cx+Math.cos(a+1.4)*r2,cy+Math.sin(a+1.4)*r2);
+    ctx.stroke();
+  }
+  requestAnimationFrame(hero);
+}
+hero();
+
+function resetDemos(){
+  document.querySelector("#cssRange").value=0;
+  cssLogo.style.transform="rotate(0deg)";
+  drawRadial();drawParticles();
+  if(glApp)glApp.reset();
+}
+drawRadial();drawParticles();
+addEventListener("resize",()=>{drawRadial();drawParticles()});
+</script>
+</body>
+</html>

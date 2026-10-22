@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Web Generative Effects — 状態変化を演出に変える</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#101114;color:#f4f4f5;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  body{overflow:hidden}
+  .deck{height:100vh;position:relative}
+  .slide{position:absolute;inset:0;padding:5vh 6vw;display:none;overflow:auto}
+  .slide.active{display:block}
+  .eyebrow{font-size:.75rem;letter-spacing:.18em;text-transform:uppercase;color:#8d93a1;margin-bottom:1rem}
+  h1{font-size:clamp(2.3rem,5.5vw,5.5rem);line-height:1.02;margin:0 0 1.4rem;max-width:1000px}
+  h2{font-size:clamp(1.9rem,3.6vw,3.6rem);margin:0 0 1rem}
+  h3{margin:.3rem 0 .5rem}
+  p{color:#b9bdc7;line-height:1.7;max-width:850px}
+  .lead{font-size:1.1rem}
+  .tag{display:inline-block;border:1px solid #363a44;border-radius:999px;padding:.32rem .68rem;color:#c9cdd5;margin:.15rem;font-size:.82rem}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
+  .grid.cols2{grid-template-columns:repeat(2,1fr)}
+  .grid.cols5{grid-template-columns:repeat(5,1fr)}
+  .card,.demo{background:#181a1f;border:1px solid #2b2e36;border-radius:16px;padding:18px}
+  .demo{position:relative;overflow:hidden}
+  .demo-stage{height:280px;border-radius:12px;background:#07080a;display:grid;place-items:center;overflow:hidden;position:relative}
+  .demo-stage canvas{width:100%;height:100%;display:block}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0c0d10;border:1px solid #292c34;border-radius:12px;padding:14px;overflow:auto;font-size:.76rem;line-height:1.55;color:#d9dce3}
+  .split{display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:start}
+  .flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:22px 0}
+  .flow span{padding:.6rem .9rem;border:1px solid #3a3e49;border-radius:12px;background:#181a1f;font-size:.9rem}
+  .arrow{color:#777d89}
+  .compare td,.compare th{padding:12px;border-bottom:1px solid #2b2e36;text-align:left;font-size:.92rem}
+  .compare{width:100%;border-collapse:collapse;margin-top:20px}
+  .controls{display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  input[type=range]{width:130px}
+  button{background:#f4f4f5;color:#101114;border:0;border-radius:9px;padding:.5rem .85rem;font-weight:650;cursor:pointer;font-size:.85rem}
+  .note{font-size:.85rem;color:#8d93a1}
+  .use-case{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .swatch{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .nav{position:fixed;right:24px;bottom:22px;z-index:10;display:flex;gap:8px}
+  .counter{position:fixed;left:24px;bottom:25px;color:#777d89;font-size:.85rem;z-index:10}
+  .key{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);color:#777d89;font-size:.72rem;z-index:10}
+  .hero-art{height:52vh;border-radius:22px;border:1px solid #2b2e36;background:#07080a;position:relative;overflow:hidden}
+  #heroCanvas{width:100%;height:100%;display:block}
+  .mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:16px}
+  .mini-grid .demo-stage{height:110px}
+  @media(max-width:900px){.grid,.grid.cols2,.grid.cols5,.split{grid-template-columns:1fr}.mini-grid{grid-template-columns:1fr 1fr}.slide{padding:6vh 5vw}.key{display:none}}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<section class="slide active">
+  <div class="eyebrow">Web Generative Effects / 01</div>
+  <h1>状態変化を、<br>そのサイトの世界観にする。</h1>
+  <p class="lead">水・炎・雷・草花——「何かが変化していく様子」をコードで生成し、業種に合わせて転用する。ロゴではなく、サイト全体の背景・ヒーローセクション・トランジションへの応用が目的。</p>
+  <div class="hero-art"><canvas id="heroCanvas"></canvas></div>
+  <p class="note">← → または ↑ ↓ でスライド移動</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">02 / Concept</div>
+  <h2>「状態変化」は、<br>業種のメタファーになる</h2>
+  <p>気象・物理現象は、そのまま業種のブランドイメージと結びつきやすい。技術は使い回せても、色とモチーフを変えるだけで別の業種に転用できる。</p>
+  <table class="compare">
+    <tr><th>状態変化</th><th>技術</th><th>合うサイト例</th></tr>
+    <tr><td>水面・波・光の屈折</td><td>WebGL / GLSL</td><td>プール、海、リゾート、水族館</td></tr>
+    <tr><td>炎・熱・粒子の上昇</td><td>Canvas + JS</td><td>キャンプ、焚き火、暖炉、アウトドアブランド</td></tr>
+    <tr><td>雷・放電・回路の光</td><td>Canvas + JS</td><td>ロケット、宇宙、先端技術、ガジェット企業</td></tr>
+    <tr><td>成長・分岐・開花</td><td>Canvas + JS</td><td>植物園、公園、農園、サステナ系ブランド</td></tr>
+    <tr><td>雪・結晶・氷結</td><td>Canvas + JS</td><td>スキー場、冬季イベント、ラグジュアリー系</td></tr>
+  </table>
+  <p class="note">この後、上から4つ + ボーナス1つを実際に動くデモで見せる。</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">03 / Water</div>
+  <h2>水：光の屈折を<br>三角関数で合成する</h2>
+  <div class="split">
+    <div class="demo"><div class="demo-stage"><canvas id="waterCanvas"></canvas></div>
+      <div class="controls">
+        <label>流速 <input id="waterSpeed" type="range" min="5" max="100" value="35"></label>
+        <span class="note" id="waterStatus">初期化中…</span>
+      </div>
+    </div>
+    <div>
+      <pre>for (int i=1;i<=3;i++){
+  float fi=float(i);
+  c += sin(p.x*fi*4.0+t*.6+p.y*2.0)
+       *(0.5/fi);
+  c += sin(p.y*fi*3.0-t*.4+p.x*1.5)
+       *(0.5/fi);
+}
+// wave 0-1 を深海色→浅瀬色→泡色へ mix</pre>
+      <div class="use-case"><span class="swatch" style="background:#38b6c9"></span><p class="note">プール・海・水族館サイトのヒーロー背景。ノイズ関数を使わず sin の重ね合わせだけなので、GLSLコンパイルが壊れにくい。</p></div>
+      <p class="note"><strong>転用のコツ：</strong>deep/shallow/foamの3色を変えるだけで「温泉」「氷結した海」にも流用できる。</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">04 / Fire</div>
+  <h2>炎：上昇する<br>粒子で熱を表現する</h2>
+  <div class="split">
+    <div class="demo"><div class="demo-stage"><canvas id="fireCanvas"></canvas></div>
+      <div class="controls"><label>火力 <input id="fireIntensity" type="range" min="10" max="80" value="35"></label></div>
+    </div>
+    <div>
+      <pre>p.vy *= 0.985;      // 上昇が徐々に減速
+p.life -= 0.016;    // 寿命で透明化
+g = radialGradient(p.x,p.y,size);
+g.addColorStop(0, orange*life);
+g.addColorStop(1, transparent);
+ctx.globalCompositeOperation
+  = 'lighter';       // 重なるほど明るく</pre>
+      <div class="use-case"><span class="swatch" style="background:#ff8a3d"></span><p class="note">キャンプ・焚き火・暖炉・アウトドアギアのサイト。ボタンhoverや「読み込み中」演出にも小さく転用可能。</p></div>
+      <p class="note"><strong>転用のコツ：</strong>色を橙→紫にして上昇速度を上げると「魔法のエフェクト」、下降させて灰色にすると「煙・霧」になる。</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">05 / Lightning</div>
+  <h2>雷：中点変位法で<br>放電の形を生成する</h2>
+  <div class="split">
+    <div class="demo"><div class="demo-stage"><canvas id="lightningCanvas"></canvas></div>
+      <div class="controls">
+        <label>頻度 <input id="lightningSpeed" type="range" min="0" max="100" value="55"></label>
+        <button id="lightningBtn">今すぐ放電</button>
+      </div>
+    </div>
+    <div>
+      <pre>function branch(x1,y1,x2,y2,disp,depth){
+  if(depth<=0) return [[x1,y1,x2,y2]];
+  const mx=(x1+x2)/2+(rand-.5)*disp;
+  const my=(y1+y2)/2+(rand-.5)*disp;
+  return [...branch(x1,y1,mx,my,disp/1.9,depth-1),
+          ...branch(mx,my,x2,y2,disp/1.9,depth-1)];
+}
+// shadowBlur でグロー、乱数で分岐も追加</pre>
+      <div class="use-case"><span class="swatch" style="background:#8fd9ff"></span><p class="note">ロケット・宇宙・先端技術・ガジェット企業のサイト。回路基板の光の走りや起動アニメーションにも応用しやすい。</p></div>
+      <p class="note"><strong>転用のコツ：</strong>青白い光を緑にすると「マトリックス的なテック感」、横方向にすると「基盤の電流」になる。</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">06 / Flora</div>
+  <h2>草花：再帰分岐で<br>成長そのものを描く</h2>
+  <div class="split">
+    <div class="demo"><div class="demo-stage"><canvas id="floraCanvas"></canvas></div>
+      <div class="controls">
+        <label>成長速度 <input id="floraSpeed" type="range" min="10" max="100" value="45"></label>
+        <button id="floraReset">別株を生成</button>
+      </div>
+    </div>
+    <div>
+      <pre>function walk(x,y,len,angle,depth,n){
+  const localT = clamp(
+    (t - depth/maxDepth) * maxDepth, 0, 1);
+  // localTが枝ごとの「伸びる進捗」
+  draw(x,y,x2,y2);
+  if(localT>=1){
+    walk(x2,y2,len*n.lenFactor,angle-n.spread,...);
+    walk(x2,y2,len*n.lenFactor,angle+n.spread,...);
+  }
+}</pre>
+      <div class="use-case"><span class="swatch" style="background:#9bdc7a"></span><p class="note">植物園・公園・農園・サステナブル系ブランドのサイト。スクロールに合わせて成長を進める演出に向く。</p></div>
+      <p class="note"><strong>転用のコツ：</strong>枝を白・氷色にすると「霜の結晶」、赤に近い色で先端に丸をつけると「血管・神経」のような医療系ビジュアルにもなる。</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">07 / Bonus — Snow</div>
+  <h2>ボーナス：雪も<br>同じ発想で数分で作れる</h2>
+  <div class="split">
+    <div class="demo"><div class="demo-stage"><canvas id="snowCanvas"></canvas></div>
+      <div class="controls"><label>密度 <input id="snowDensity" type="range" min="20" max="200" value="90"></label></div>
+    </div>
+    <div>
+      <pre>f.y += f.vy;                 // 落下
+f.x += Math.sin(t+f.drift)*.3; // 横揺れ
+if(f.y>h){ f.y=-4; f.x=rand*w; } // 上に戻す</pre>
+      <div class="use-case"><span class="swatch" style="background:#e8f4ff"></span><p class="note">スキー場・冬季イベント・ラグジュアリー系サイト。粒子の速度・揺れ幅を変えるだけで「桜吹雪」「花粉」「灰」にも流用できる。</p></div>
+      <p class="note">水・炎・雷・草花の4系統と組み合わせ元は同じ：<strong>粒子 or 数式で「状態」を表し、時間で変化させる。</strong></p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">08 / More ideas</div>
+  <h2>他にも作れるもの</h2>
+  <p>上の5つ以外にも、同じ考え方（粒子・数式・時間）で成立する候補。</p>
+  <div class="grid cols5">
+    <div class="card"><h3>霧・雲</h3><p class="note">低い透明度のCanvasブラーで漂わせる。ウェルネス・瞑想系サイト向き。</p><span class="tag">Canvas</span></div>
+    <div class="card"><h3>液体金属</h3><p class="note">距離場+反射風グラデーション。自動車・高級プロダクト系向き。</p><span class="tag">WebGL</span></div>
+    <div class="card"><h3>ひび割れ</h3><p class="note">ボロノイ分割で衝撃の広がりを表現。ゲーム・エンタメの演出向き。</p><span class="tag">Canvas / WebGL</span></div>
+    <div class="card"><h3>オーロラ</h3><p class="note">縦方向のノイズ帯をゆっくり流す。旅行・北欧ブランド向き。</p><span class="tag">WebGL</span></div>
+    <div class="card"><h3>砂丘・風紋</h3><p class="note">sinの重ね合わせで地形の等高線を作る。旅行・砂漠観光地向き。</p><span class="tag">Canvas / WebGL</span></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">09 / How to choose</div>
+  <h2>業種から逆算して選ぶ</h2>
+  <table class="compare">
+    <tr><th>業種</th><th>おすすめ演出</th><th>技術</th><th>実装難度</th><th>負荷の目安</th></tr>
+    <tr><td>プール・海・水族館</td><td>水</td><td>WebGL</td><td>★★★</td><td>中（GPU依存）</td></tr>
+    <tr><td>キャンプ・アウトドア</td><td>炎</td><td>Canvas</td><td>★★</td><td>低〜中（粒子数で調整）</td></tr>
+    <tr><td>宇宙・先端技術・ガジェット</td><td>雷</td><td>Canvas</td><td>★★</td><td>低（間欠的に発生）</td></tr>
+    <tr><td>植物園・公園・サステナ</td><td>草花</td><td>Canvas</td><td>★★★</td><td>低（一度生成すれば軽い）</td></tr>
+    <tr><td>スキー・冬季・ラグジュアリー</td><td>雪</td><td>Canvas</td><td>★</td><td>低</td></tr>
+  </table>
+  <p class="note">現実的な優先順位：まずCanvas系（炎・雷・草花・雪）を先に固める。WebGLは水だけに絞って確実に動かす方が、全体の完成スピードが上がる。</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">10 / Implementation</div>
+  <h2>1つのコンポーネントに<br>抽象化する</h2>
+  <div class="flow">
+    <span>type: water/fire/lightning/flora/snow</span><b class="arrow">→</b><span>color</span><b class="arrow">→</b><span>intensity</span><b class="arrow">→</b><span>speed</span>
+  </div>
+  <pre>&lt;GenerativeBackdrop
+  type="fire"
+  palette={["#ff8a3d","#ffcf6b"]}
+  intensity={35}
+  speed={1}
+/&gt;
+
+// 内部では type ごとに
+// initWaterEffect / initFireEffect / ...
+// を呼び分けるだけ。DOM構造とcanvasは共通</pre>
+  <p>今のReactの仕事とそのまま接続できる。<code>type</code>を切り替えるpropsにしておけば、業種違いのサイトが増えても同じコンポーネントを使い回せる。</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">11 / Next</div>
+  <h2>次にやること</h2>
+  <div class="grid cols2">
+    <div class="card"><h3>1. 技術を固定する</h3><p class="note">Canvas系を先に4つ完成させる。WebGLは水のみ。壊れやすい部分を先に減らす。</p></div>
+    <div class="card"><h3>2. 1コンポーネント化</h3><p class="note">type propsで切り替えられるGenerativeBackdropを作り、業種違いの案件に転用できる状態にする。</p></div>
+    <div class="card"><h3>3. パフォーマンス確認</h3><p class="note">モバイルでの負荷を先に測る。粒子数・WebGL有無をpropsで落とせるようにしておく。</p></div>
+    <div class="card"><h3>4. 実案件で試す</h3><p class="note">今のプロダクトのどこか（ローディング・ヒーロー背景）に1つ実装して、実際の見え方を確認する。</p></div>
+  </div>
+</section>
+
+<div class="counter" id="counter">1 / 11</div>
+<div class="key">← → / ↑ ↓ で移動</div>
+<div class="nav"><button id="prev">←</button><button id="next">→</button></div>
+</div>
+
+<script>
+/* ---------- Slide navigation ---------- */
+const slides=[...document.querySelectorAll(".slide")];
+let current=0;
+function show(n){
+  current=(n+slides.length)%slides.length;
+  slides.forEach((s,i)=>s.classList.toggle("active",i===current));
+  document.querySelector("#counter").textContent=`${current+1} / ${slides.length}`;
+}
+document.querySelector("#prev").onclick=()=>show(current-1);
+document.querySelector("#next").onclick=()=>show(current+1);
+addEventListener("keydown",e=>{
+  if(["ArrowRight","ArrowDown","PageDown"," "].includes(e.key)){e.preventDefault();show(current+1)}
+  if(["ArrowLeft","ArrowUp","PageUp"].includes(e.key)){e.preventDefault();show(current-1)}
+});
+
+/* ---------- Shared canvas helper ---------- */
+function setupCanvas(c){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const r=c.getBoundingClientRect();
+  c.width=Math.max(1,r.width*dpr);
+  c.height=Math.max(1,r.height*dpr);
+  const ctx=c.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w:r.width,h:r.height};
+}
+
+/* ---------- WebGL helpers ---------- */
+const baseVS=`attribute vec2 a_position;
+void main(){gl_Position=vec4(a_position,0.0,1.0);}`;
+function compileShader(gl,type,src){
+  const s=gl.createShader(type);
+  gl.shaderSource(s,src);
+  gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){
+    const log=gl.getShaderInfoLog(s);
+    gl.deleteShader(s);
+    throw new Error(log);
+  }
+  return s;
+}
+function linkProgram(gl,vs,fs){
+  const p=gl.createProgram();
+  gl.attachShader(p,vs);gl.attachShader(p,fs);gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
+    const log=gl.getProgramInfoLog(p);
+    gl.deleteProgram(p);
+    throw new Error(log);
+  }
+  return p;
+}
+
+/* ---------- Water (WebGL) ---------- */
+function initWaterEffect(){
+  const canvas=document.querySelector("#waterCanvas");
+  const status=document.querySelector("#waterStatus");
+  const gl=canvas.getContext("webgl",{antialias:false});
+  if(!gl){ if(status) status.textContent="WebGL非対応の環境です"; return; }
+  const fs=`
+  precision mediump float;
+  uniform vec2 u_resolution;
+  uniform float u_time;
+  uniform float u_speed;
+  void main(){
+    vec2 uv = gl_FragCoord.xy/u_resolution;
+    vec2 p = uv*2.0-1.0;
+    p.x *= u_resolution.x/u_resolution.y;
+    float t = u_time*u_speed;
+    float c = 0.0;
+    for(int i=1;i<=3;i++){
+      float fi=float(i);
+      c += sin(p.x*fi*4.0 + t*0.6 + p.y*2.0)*(0.5/fi);
+      c += sin(p.y*fi*3.0 - t*0.4 + p.x*1.5)*(0.5/fi);
+    }
+    float wave = c*0.5+0.5;
+    vec3 deep = vec3(0.02,0.08,0.16);
+    vec3 shallow = vec3(0.08,0.42,0.52);
+    vec3 foam = vec3(0.78,0.93,0.96);
+    vec3 col = mix(deep,shallow,wave);
+    float hi = smoothstep(0.72,0.95,wave);
+    col = mix(col,foam,hi*0.55);
+    gl_FragColor = vec4(col,1.0);
+  }`;
+  try{
+    const prog=linkProgram(gl,compileShader(gl,gl.VERTEX_SHADER,baseVS),compileShader(gl,gl.FRAGMENT_SHADER,fs));
+    const buf=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+    const posLoc=gl.getAttribLocation(prog,"a_position");
+    const resLoc=gl.getUniformLocation(prog,"u_resolution");
+    const timeLoc=gl.getUniformLocation(prog,"u_time");
+    const speedLoc=gl.getUniformLocation(prog,"u_speed");
+    if(status) status.textContent=`WebGL OK / ${gl.getParameter(gl.RENDERER)}`;
+    const start=performance.now();
+    function resize(){
+      const dpr=Math.min(devicePixelRatio||1,2);
+      const r=canvas.getBoundingClientRect();
+      canvas.width=Math.max(1,r.width*dpr);
+      canvas.height=Math.max(1,r.height*dpr);
+      gl.viewport(0,0,canvas.width,canvas.height);
+    }
+    function frame(now){
+      resize();
+      gl.useProgram(prog);
+      gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+      gl.enableVertexAttribArray(posLoc);
+      gl.vertexAttribPointer(posLoc,2,gl.FLOAT,false,0,0);
+      gl.uniform2f(resLoc,canvas.width,canvas.height);
+      gl.uniform1f(timeLoc,(now-start)/1000);
+      const speedEl=document.querySelector("#waterSpeed");
+      gl.uniform1f(speedLoc,(speedEl?+speedEl.value:35)/50);
+      gl.drawArrays(gl.TRIANGLES,0,6);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }catch(e){
+    if(status) status.textContent="Shaderエラー: "+e.message;
+    console.error(e);
+  }
+}
+
+/* ---------- Fire (Canvas) ---------- */
+function initFireEffect(){
+  const canvas=document.querySelector("#fireCanvas");
+  const ctx=canvas.getContext("2d");
+  let particles=[];
+  function frame(){
+    const {w,h}=setupCanvas(canvas);
+    const intensityEl=document.querySelector("#fireIntensity");
+    const intensity=intensityEl?+intensityEl.value:35;
+    ctx.clearRect(0,0,w,h);
+    for(let i=0;i<Math.round(intensity/6);i++){
+      particles.push({
+        x: w/2+(Math.random()-0.5)*w*0.22,
+        y: h*0.98,
+        vx: (Math.random()-0.5)*0.5,
+        vy: -(1.2+Math.random()*1.6),
+        life: 1,
+        size: 3+Math.random()*7
+      });
+    }
+    ctx.globalCompositeOperation="lighter";
+    particles.forEach(p=>{
+      p.x += p.vx + Math.sin(p.y*0.06)*0.4;
+      p.y += p.vy;
+      p.vy *= 0.985;
+      p.life -= 0.016;
+      const a=Math.max(p.life,0);
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size);
+      g.addColorStop(0,`rgba(255,${Math.round(210*a+40)},${Math.round(60*a)},${a})`);
+      g.addColorStop(1,"rgba(255,60,0,0)");
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      ctx.fill();
+    });
+    ctx.globalCompositeOperation="source-over";
+    particles=particles.filter(p=>p.life>0 && p.y>-20);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- Lightning (Canvas) ---------- */
+function initLightningEffect(){
+  const canvas=document.querySelector("#lightningCanvas");
+  const ctx=canvas.getContext("2d");
+  function branch(x1,y1,x2,y2,disp,depth,segments){
+    if(depth<=0){ segments.push([x1,y1,x2,y2]); return; }
+    const mx=(x1+x2)/2+(Math.random()-0.5)*disp;
+    const my=(y1+y2)/2+(Math.random()-0.5)*disp;
+    branch(x1,y1,mx,my,disp/1.9,depth-1,segments);
+    branch(mx,my,x2,y2,disp/1.9,depth-1,segments);
+    if(Math.random()<0.16 && depth>2){
+      const bx=mx+(Math.random()-0.5)*disp*1.4;
+      const by=my+Math.random()*disp*1.2;
+      branch(mx,my,bx,by,disp/2.2,depth-2,segments);
+    }
+  }
+  function strike(w,h){
+    const segments=[];
+    const x2=w*0.5+(Math.random()-0.5)*w*0.4;
+    branch(w*0.5,0,x2,h,w*0.22,6,segments);
+    return segments;
+  }
+  let current=null, opacity=0;
+  function fire(){
+    const r=canvas.getBoundingClientRect();
+    current=strike(r.width,r.height);
+    opacity=1;
+  }
+  function loop(){
+    const {w,h}=setupCanvas(canvas);
+    ctx.clearRect(0,0,w,h);
+    if(current && opacity>0){
+      ctx.save();
+      ctx.strokeStyle=`rgba(190,225,255,${opacity})`;
+      ctx.shadowColor="#8fd9ff";
+      ctx.shadowBlur=18;
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      current.forEach(([x1,y1,x2,y2])=>{ ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); });
+      ctx.stroke();
+      ctx.restore();
+      opacity-=0.03;
+    }
+    requestAnimationFrame(loop);
+  }
+  function scheduleNext(){
+    const speedEl=document.querySelector("#lightningSpeed");
+    const speed=speedEl?+speedEl.value:55;
+    const wait=2200-speed*18+Math.random()*600;
+    setTimeout(()=>{ fire(); scheduleNext(); }, Math.max(300,wait));
+  }
+  requestAnimationFrame(loop);
+  fire();
+  scheduleNext();
+  const btn=document.querySelector("#lightningBtn");
+  if(btn) btn.onclick=fire;
+}
+
+/* ---------- Flora (Canvas) ---------- */
+function seededRandom(seed){
+  let s=seed;
+  return function(){
+    s=(s*9301+49297)%233280;
+    return s/233280;
+  };
+}
+function buildTree(rand,maxDepth){
+  function node(depth){
+    if(depth>=maxDepth) return null;
+    return {
+      spread: 0.42+rand()*0.28,
+      lenFactor: 0.68+rand()*0.14,
+      left: node(depth+1),
+      right: node(depth+1)
+    };
+  }
+  return node(0);
+}
+function drawTree(ctx,w,h,t,tree,maxDepth,flowerColor,branchColor){
+  const baseLen=h*0.28;
+  function walk(x,y,len,angle,depth,n){
+    if(!n) return;
+    const revealAt=depth/maxDepth;
+    const nextRevealAt=(depth+1)/maxDepth;
+    const localT=Math.min(1,Math.max(0,(t-revealAt)/(nextRevealAt-revealAt)));
+    if(localT<=0) return;
+    const x2=x+Math.cos(angle)*len*localT;
+    const y2=y+Math.sin(angle)*len*localT;
+    ctx.lineWidth=Math.max(1,(maxDepth-depth)*0.9);
+    ctx.strokeStyle=depth>maxDepth-3?flowerColor:branchColor;
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x2,y2);ctx.stroke();
+    if(depth>maxDepth-3 && localT>0.9){
+      ctx.fillStyle=flowerColor;
+      ctx.beginPath();ctx.arc(x2,y2,2.2,0,Math.PI*2);ctx.fill();
+    }
+    if(localT>=1){
+      walk(x2,y2,len*n.lenFactor,angle-n.spread,depth+1,n.left);
+      walk(x2,y2,len*n.lenFactor,angle+n.spread,depth+1,n.right);
+    }
+  }
+  walk(w/2,h*0.96,baseLen,-Math.PI/2,0,tree);
+}
+function initFloraEffect(){
+  const canvas=document.querySelector("#floraCanvas");
+  const ctx=canvas.getContext("2d");
+  const maxDepth=7;
+  let tree=buildTree(seededRandom(7),maxDepth);
+  let start=performance.now();
+  const cycle=5200;
+  function loop(now){
+    const {w,h}=setupCanvas(canvas);
+    ctx.clearRect(0,0,w,h);
+    const speedEl=document.querySelector("#floraSpeed");
+    const speed=(speedEl?+speedEl.value:45)/50;
+    let t=((now-start)*speed % cycle)/cycle;
+    t=Math.min(1,t*1.15);
+    drawTree(ctx,w,h,t,tree,maxDepth,"#9bdc7a","#5b3a24");
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  const btn=document.querySelector("#floraReset");
+  if(btn) btn.onclick=()=>{
+    tree=buildTree(seededRandom(Math.floor(Math.random()*10000)),maxDepth);
+    start=performance.now();
+  };
+}
+
+/* ---------- Snow (Canvas) ---------- */
+function initSnowEffect(){
+  const canvas=document.querySelector("#snowCanvas");
+  const ctx=canvas.getContext("2d");
+  let flakes=[];
+  function ensure(w,h,count){
+    while(flakes.length<count){
+      flakes.push({x:Math.random()*w,y:Math.random()*h,r:1+Math.random()*2.5,vy:0.4+Math.random()*0.8,drift:Math.random()*2});
+    }
+    while(flakes.length>count) flakes.pop();
+  }
+  function loop(){
+    const {w,h}=setupCanvas(canvas);
+    const densityEl=document.querySelector("#snowDensity");
+    ensure(w,h,densityEl?+densityEl.value:90);
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle="rgba(240,248,255,0.9)";
+    const t=performance.now()*0.001;
+    flakes.forEach(f=>{
+      f.y += f.vy;
+      f.x += Math.sin(t+f.drift)*0.3;
+      if(f.y>h){ f.y=-4; f.x=Math.random()*w; }
+      ctx.beginPath();
+      ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+      ctx.fill();
+    });
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ---------- Hero animation ---------- */
+function hero(){
+  const c=document.querySelector("#heroCanvas");
+  const {ctx,w,h}=setupCanvas(c);
+  const cx=w/2, cy=h/2, t=performance.now()*0.001;
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle="rgba(244,244,245,.6)";
+  ctx.lineWidth=1;
+  for(let i=0;i<130;i++){
+    const a=i*Math.PI*2/130+t*0.12;
+    const r1=Math.min(w,h)*0.16+Math.sin(i*0.7+t)*10;
+    const r2=Math.min(w,h)*0.36+Math.sin(i*0.31-t)*18;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+    ctx.lineTo(cx+Math.cos(a+1.3)*r2,cy+Math.sin(a+1.3)*r2);
+    ctx.stroke();
+  }
+  requestAnimationFrame(hero);
+}
+hero();
+
+/* ---------- Init all demos ---------- */
+initWaterEffect();
+initFireEffect();
+initLightningEffect();
+initFloraEffect();
+initSnowEffect();
+</script>
+</body>
+</html>

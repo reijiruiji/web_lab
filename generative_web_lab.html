@@ -1,0 +1,1130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Generative Web Lab — CSS / Canvas / WebGL</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#101114;color:#f4f4f5;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .app{display:flex;height:100vh}
+  .sidebar{width:236px;flex:0 0 236px;background:#15161a;border-right:1px solid #24262c;padding:22px 14px;overflow-y:auto}
+  .brand{font-weight:700;font-size:.98rem;margin:0 0 4px 8px;letter-spacing:.01em}
+  .brand small{display:block;color:#7d818c;font-weight:400;font-size:.72rem;margin-top:2px}
+  .nav-group{font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;color:#6d7280;margin:20px 0 6px;padding:0 8px}
+  .nav-link{display:block;padding:7px 10px;border-radius:8px;color:#c3c7d0;text-decoration:none;font-size:.85rem;margin-bottom:1px;white-space:nowrap}
+  .nav-link:hover{background:#1e2026;color:#fff}
+  .nav-link.active{background:#282b33;color:#fff}
+  .content{flex:1;overflow-y:auto;scroll-behavior:smooth}
+  section.panel{padding:64px 5vw 40px;border-bottom:1px solid #1d1f24;max-width:1180px}
+  section.panel:last-of-type{border-bottom:none;min-height:80vh}
+  .eyebrow{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#8d93a1;margin-bottom:.9rem}
+  h1{font-size:clamp(2.1rem,4.6vw,4.4rem);line-height:1.05;margin:0 0 1.2rem;max-width:900px}
+  h2{font-size:clamp(1.7rem,2.8vw,2.7rem);margin:0 0 .9rem}
+  h3{margin:.3rem 0 .5rem;font-size:1rem}
+  p{color:#b9bdc7;line-height:1.7;max-width:760px}
+  .lead{font-size:1.05rem}
+  .tag{display:inline-block;border:1px solid #363a44;border-radius:999px;padding:.28rem .62rem;color:#c9cdd5;margin:.12rem;font-size:.74rem}
+  .use-case{display:flex;gap:8px;align-items:center;margin:12px 0 4px}
+  .swatch{width:10px;height:10px;border-radius:50%;display:inline-block;flex:0 0 auto}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
+  .grid.cols3{grid-template-columns:repeat(3,1fr)}
+  .card{background:#181a1f;border:1px solid #2b2e36;border-radius:14px;padding:16px}
+  .demo-block{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;margin-top:22px;align-items:start}
+  .demo-visual{background:#181a1f;border:1px solid #2b2e36;border-radius:16px;padding:14px}
+  .demo-stage{height:290px;border-radius:12px;background:#07080a;overflow:hidden;position:relative}
+  .demo-stage canvas{width:100%;height:100%;display:block}
+  .compare-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .compare-row .demo-stage{height:200px}
+  .compare-row .label{font-size:.72rem;color:#8d93a1;margin:6px 0 4px;letter-spacing:.06em;text-transform:uppercase}
+  .controls{display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  input[type=range]{width:120px}
+  label{font-size:.82rem;color:#c3c7d0}
+  .status{font-size:.74rem;color:#8d93a1;margin-top:6px;min-height:1em}
+  .code-panel{display:flex;flex-direction:column;gap:8px;background:#181a1f;border:1px solid #2b2e36;border-radius:16px;padding:14px}
+  .code-panel textarea{width:100%;height:296px;background:#0c0d10;color:#d9dce3;border:1px solid #292c34;border-radius:10px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.72rem;line-height:1.55;resize:vertical}
+  .code-actions{display:flex;gap:8px}
+  button.run{background:#f4f4f5;color:#101114;border:0;border-radius:8px;padding:.5rem 1rem;font-weight:650;cursor:pointer;font-size:.82rem}
+  button.ghost{background:transparent;color:#c3c7d0;border:1px solid #363a44;border-radius:8px;padding:.5rem 1rem;cursor:pointer;font-size:.82rem}
+  pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0c0d10;border:1px solid #292c34;border-radius:12px;padding:14px;overflow:auto;font-size:.74rem;line-height:1.55;color:#d9dce3}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:20px 0}
+  .flow span{padding:.55rem .8rem;border:1px solid #3a3e49;border-radius:10px;background:#181a1f;font-size:.82rem}
+  .arrow{color:#777d89}
+  .compare{width:100%;border-collapse:collapse;margin-top:16px}
+  .compare td,.compare th{padding:10px;border-bottom:1px solid #24262c;text-align:left;font-size:.86rem}
+  .note{font-size:.82rem;color:#8d93a1}
+  .hero-art{height:44vh;border-radius:20px;border:1px solid #2b2e36;background:#07080a;position:relative;overflow:hidden;margin-top:20px}
+  #heroCanvas{width:100%;height:100%;display:block}
+  .css-logo{width:130px;height:130px;position:relative;margin:0 auto}
+  .css-logo i{position:absolute;width:60px;height:60px;border:6px solid #f4f4f5;border-radius:50%;left:35px;top:35px;transition:.15s}
+  .css-logo i:nth-child(1){transform:translateY(-30px)}
+  .css-logo i:nth-child(2){transform:translate(26px,-15px)}
+  .css-logo i:nth-child(3){transform:translate(26px,15px)}
+  .css-logo i:nth-child(4){transform:translateY(30px)}
+  .css-logo i:nth-child(5){transform:translate(-26px,15px)}
+  .css-logo i:nth-child(6){transform:translate(-26px,-15px)}
+  @media(max-width:980px){
+    .app{flex-direction:column;height:auto}
+    .sidebar{width:100%;flex:0 0 auto;display:flex;gap:4px;overflow-x:auto;padding:10px;position:sticky;top:0;z-index:5}
+    .nav-group{display:none}
+    .brand{display:none}
+    .content{overflow-y:visible}
+    .demo-block,.grid,.compare-row{grid-template-columns:1fr}
+    section.panel{padding:36px 5vw}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">Generative Web Lab<small>コードで状態変化を演出する</small></div>
+    <nav id="sideNav">
+      <div class="nav-group">概要</div>
+      <a href="#top" class="nav-link">ホーム</a>
+      <div class="nav-group">基礎</div>
+      <a href="#pure-css" class="nav-link">Pure CSS</a>
+      <a href="#canvas-js" class="nav-link">Canvas + JS</a>
+      <a href="#webgl-intro" class="nav-link">WebGL 最小構成</a>
+      <div class="nav-group">状態変化ギャラリー (WebGL)</div>
+      <a href="#water" class="nav-link">水 / Water</a>
+      <a href="#fire" class="nav-link">炎 / Fire</a>
+      <a href="#lightning" class="nav-link">雷 / Lightning</a>
+      <a href="#flora" class="nav-link">草花 / Flora</a>
+      <a href="#snow" class="nav-link">雪 / Snow</a>
+      <a href="#fog" class="nav-link">霧・雲 / Fog</a>
+      <a href="#metal" class="nav-link">液体金属 / Metal</a>
+      <a href="#cracks" class="nav-link">ひび割れ / Cracks</a>
+      <a href="#aurora" class="nav-link">オーロラ / Aurora</a>
+      <a href="#dunes" class="nav-link">砂丘・風紋 / Dunes</a>
+      <div class="nav-group">活用</div>
+      <a href="#choose" class="nav-link">業種別の選び方</a>
+      <a href="#react" class="nav-link">Reactへの実装</a>
+      <a href="#next" class="nav-link">次のアクション</a>
+    </nav>
+  </aside>
+
+  <main class="content" id="top">
+
+    <section class="panel" id="overview">
+      <div class="eyebrow">Generative Web Lab</div>
+      <h1>状態変化を、<br>コードで演出する。</h1>
+      <p class="lead">Pure CSS → Canvas + JS → WebGL/GLSL の順に難度が上がる。ギャラリー内のシェーダーはすべて<strong>コードを直接編集して「実行」ボタンで再コンパイル</strong>できる。壊しても「初期コードに戻す」でいつでもやり直せる。</p>
+      <div class="hero-art"><canvas id="heroCanvas"></canvas></div>
+      <p class="note">← 左のサイドバーから各セクションへジャンプできる。</p>
+    </section>
+
+    <section class="panel" id="pure-css">
+      <div class="eyebrow">基礎 / Pure CSS</div>
+      <h2>CSS：円を重ねて<br>形を組み立てる</h2>
+      <p>DOM要素とCSSの transform / border-radius / clip-path だけで幾何学的なマークが作れる。得意なのはUI装飾・幾何学ロゴ。粒子やノイズのような「生成される」表現には向かない。</p>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage" style="display:grid;place-items:center">
+            <div class="css-logo" id="cssLogo"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="controls"><label>回転 <input id="cssRange" type="range" min="0" max="360" value="0"></label></div>
+        </div>
+        <div class="code-panel">
+          <textarea id="cssCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" id="cssRun">適用 (Run)</button>
+            <button class="ghost" id="cssReset">初期コードに戻す</button>
+          </div>
+          <p class="status" id="cssStatus"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="canvas-js">
+      <div class="eyebrow">基礎 / Canvas + JS</div>
+      <h2>Canvas：座標と乱数から<br>線を生成する</h2>
+      <p>「角度 → 座標 → 線を引く」がジェネラティブアートの基本形。JavaScriptのコードを直接編集して再生成できる。CPUで1本ずつ計算するため、数千本を超えると重くなりやすい。</p>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="canvasDemo"></canvas></div>
+          <div class="controls"><button class="run" id="canvasRunBtn">実行 (Run)</button></div>
+          <p class="status" id="canvasStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="canvasCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" id="canvasApply">実行 (Run)</button>
+            <button class="ghost" id="canvasReset">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+      <p class="note">コードは <code>ctx, w, h, t</code>(コンテキスト・幅・高さ・経過秒)を使って毎フレーム呼ばれる関数として実行される。</p>
+    </section>
+
+    <section class="panel" id="webgl-intro">
+      <div class="eyebrow">基礎 / WebGL</div>
+      <h2>WebGL：GPUに<br>ピクセル単位で計算させる</h2>
+      <p>JavaScriptで1本ずつ描くのではなく、GPUに「この数式で画面全体を計算して」と渡す。この先のギャラリーは全部この最小構成(頂点シェーダー固定・フラグメントシェーダーのみ編集)がベースになっている。</p>
+      <div class="flow">
+        <span>Canvas</span><b class="arrow">→</b><span>WebGL Context</span><b class="arrow">→</b><span>Vertex Shader</span><b class="arrow">→</b><span>Fragment Shader</span><b class="arrow">→</b><span>Program</span><b class="arrow">→</b><span>Draw</span>
+      </div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="glIntroCanvas"></canvas></div>
+          <div class="controls"><label>速度 <input id="glIntroSpeed" type="range" min="0" max="100" value="40"></label></div>
+          <p class="status" id="glIntroStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="glIntroCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="glintro">実行 (Run)</button>
+            <button class="ghost" data-reset="glintro">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+      <p class="note">distance() / sin() / smoothstep() の3つを覚えるだけで、円・波・輪郭のほとんどが作れる。</p>
+    </section>
+
+    <section class="panel" id="water">
+      <div class="eyebrow">ギャラリー / Water</div>
+      <h2>水：三角関数の重ね合わせで<br>光の屈折を作る</h2>
+      <p>sin波を複数の周波数で重ねて、深海色→浅瀬色→泡色へ mix する。ノイズ関数を使わないので軽く、コンパイルも壊れにくい。</p>
+      <div class="use-case"><span class="swatch" style="background:#38b6c9"></span><span class="note">向いているサイト：プール・海・水族館・リゾート</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="waterCanvas"></canvas></div>
+          <div class="controls"><label>流速 <input id="waterSpeed" type="range" min="5" max="100" value="35"></label></div>
+          <p class="status" id="waterStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="waterCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="water">実行 (Run)</button>
+            <button class="ghost" data-reset="water">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+      <p class="note"><strong>転用のコツ：</strong>3色(deep/shallow/foam)を変えるだけで「温泉」にも「氷結した海」にもなる。</p>
+    </section>
+
+    <section class="panel" id="fire">
+      <div class="eyebrow">ギャラリー / Fire</div>
+      <h2>炎：フラクタルノイズの<br>乱流で揺らめきを作る</h2>
+      <p>fbm(ノイズを何層も重ねたもの)を上方向に流し、明るさのしきい値で炎の輪郭を切り出す。パーティクルを使わずGPUで1ピクセルずつ計算しているので、粒子数を気にせず高解像度でも軽い。</p>
+      <div class="use-case"><span class="swatch" style="background:#ff8a3d"></span><span class="note">向いているサイト：キャンプ・焚き火・暖炉・アウトドアギア</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="fireCanvas"></canvas></div>
+          <div class="controls"><label>勢い <input id="fireIntensity" type="range" min="20" max="200" value="100"></label></div>
+          <p class="status" id="fireStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="fireCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="fire">実行 (Run)</button>
+            <button class="ghost" data-reset="fire">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+      <p class="note"><strong>転用のコツ：</strong>色を紫にすると「魔法のエフェクト」、上下反転して灰色にすると「煙」になる。</p>
+    </section>
+
+    <section class="panel" id="lightning">
+      <div class="eyebrow">ギャラリー / Lightning</div>
+      <h2>雷：ノイズで折れ線を歪ませ<br>発光として描く</h2>
+      <p>座標のy位置ごとにノイズでx位置をずらし、その線までの距離の逆数を明るさにすることでネオンのような発光を作る。一定間隔でシード値(seed)が切り替わり、稲妻が生成し直される。</p>
+      <div class="use-case"><span class="swatch" style="background:#8fd9ff"></span><span class="note">向いているサイト：宇宙・ロケット・先端技術・ガジェット企業</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="lightningCanvas"></canvas></div>
+          <div class="controls"><label>頻度 <input id="lightningFreq" type="range" min="10" max="100" value="40"></label></div>
+          <p class="status" id="lightningStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="lightningCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="lightning">実行 (Run)</button>
+            <button class="ghost" data-reset="lightning">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+      <p class="note"><strong>転用のコツ：</strong>色を緑にすると「基盤の電流」、横向きにすると「データ転送のライン」になる。</p>
+    </section>
+
+    <section class="panel" id="flora">
+      <div class="eyebrow">ギャラリー / Flora</div>
+      <h2>草花：極座標の花びらを<br>時間で開かせる</h2>
+      <p>中心からの角度と距離(極座標)でcos波の花びら形状を作り、時間で半径をゆっくり広げることで「開花」に見せる。再帰的な枝ではなく、1つの数式だけで完結しているので軽い。</p>
+      <div class="use-case"><span class="swatch" style="background:#9bdc7a"></span><span class="note">向いているサイト：植物園・公園・農園・サステナブル系ブランド</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="floraCanvas"></canvas></div>
+          <div class="controls"><label>花びら数 <input id="floraPetals" type="range" min="3" max="12" value="6"></label></div>
+          <p class="status" id="floraStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="floraCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="flora">実行 (Run)</button>
+            <button class="ghost" data-reset="flora">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+      <p class="note"><strong>転用のコツ：</strong>白×氷色にすると「霜の結晶」、赤系にすると医療系の血管・神経のようなビジュアルにもなる。</p>
+    </section>
+
+    <section class="panel" id="snow">
+      <div class="eyebrow">ギャラリー / Snow</div>
+      <h2>雪：タイル状ハッシュで<br>粒を降らせる</h2>
+      <p>画面をグリッド状に分割し、セルごとにハッシュ関数で粒の位置を決めて時間でy方向にずらす。3層重ねることで奥行きのある降雪になる。</p>
+      <div class="use-case"><span class="swatch" style="background:#e8f4ff"></span><span class="note">向いているサイト：スキー場・冬季イベント・ラグジュアリー系</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="snowCanvas"></canvas></div>
+          <div class="controls"><label>密度 <input id="snowDensity" type="range" min="20" max="150" value="70"></label></div>
+          <p class="status" id="snowStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="snowCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="snow">実行 (Run)</button>
+            <button class="ghost" data-reset="snow">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+      <p class="note"><strong>転用のコツ：</strong>速度と揺れ幅を変えるだけで「桜吹雪」「花粉」「灰」にも流用できる。</p>
+    </section>
+
+    <section class="panel" id="fog">
+      <div class="eyebrow">ギャラリー / Fog &amp; Cloud</div>
+      <h2>霧・雲：ノイズを<br>ノイズで歪ませる(ドメインワープ)</h2>
+      <p>fbmの結果を、もう一度fbmの入力座標に足し込む「ドメインワープ」という手法で、渦を巻くような自然な霧の流れを作る。低コントラストでゆっくり動かすのがコツ。</p>
+      <div class="use-case"><span class="swatch" style="background:#aeb6c2"></span><span class="note">向いているサイト：ウェルネス・瞑想・宿泊施設・霊山観光</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="fogCanvas"></canvas></div>
+          <div class="controls"><label>密度 <input id="fogDensity" type="range" min="10" max="100" value="50"></label></div>
+          <p class="status" id="fogStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="fogCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="fog">実行 (Run)</button>
+            <button class="ghost" data-reset="fog">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="metal">
+      <div class="eyebrow">ギャラリー / Liquid Metal</div>
+      <h2>液体金属：ノイズで歪めた<br>縞模様を反射に見せる</h2>
+      <p>縦の縞模様(sin)をノイズで歪ませ、コントラストを強くべき乗することで金属の反射バンドのように見せる。本物の環境マッピングではないが、軽量で「それっぽさ」は十分出る。</p>
+      <div class="use-case"><span class="swatch" style="background:#c7ccd4"></span><span class="note">向いているサイト：自動車・時計・家電などの高級プロダクト系</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="metalCanvas"></canvas></div>
+          <div class="controls"><label>光沢 <input id="metalShine" type="range" min="10" max="100" value="40"></label></div>
+          <p class="status" id="metalStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="metalCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="metal">実行 (Run)</button>
+            <button class="ghost" data-reset="metal">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="cracks">
+      <div class="eyebrow">ギャラリー / Cracks</div>
+      <h2>ひび割れ：ボロノイ分割で<br>衝撃の広がりを描く</h2>
+      <p>画面をセルに分割し、各セル内にランダムな種点を置いて最も近い種点までの距離(ボロノイ)を計算するとセル境界がひび割れ状になる。中心からの距離と時間を比較して、衝撃が外側へ広がる演出を加えている。</p>
+      <div class="use-case"><span class="swatch" style="background:#f2c14e"></span><span class="note">向いているサイト：ゲーム・エンタメ・インパクト重視の演出</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="cracksCanvas"></canvas></div>
+          <div class="controls"><label>広がる速さ <input id="cracksSpeed" type="range" min="10" max="100" value="50"></label></div>
+          <p class="status" id="cracksStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="cracksCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="cracks">実行 (Run)</button>
+            <button class="ghost" data-reset="cracks">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+      <div class="compare-row" style="margin-top:20px">
+        <div>
+          <div class="label">Canvas 2D版(参考)</div>
+          <div class="demo-stage"><canvas id="cracksCanvas2D"></canvas></div>
+        </div>
+        <div>
+          <div class="label">同じ発想をCanvasで書くと</div>
+          <pre>// 中心から放射状に線を伸ばし
+// 経過時間だけ表示範囲を広げる
+for (line of lines) {
+  if (distFromCenter(line) &lt; frontRadius)
+    drawLine(line);
+}</pre>
+        </div>
+      </div>
+      <p class="note">WebGL版はピクセル単位で境界線を計算するため滑らか。Canvas版は線分の本数がそのまま負荷になるため、本数を絞る必要がある——これが両者の実務上のトレードオフ。</p>
+    </section>
+
+    <section class="panel" id="aurora">
+      <div class="eyebrow">ギャラリー / Aurora</div>
+      <h2>オーロラ：縦方向の<br>ノイズ帯をゆっくり流す</h2>
+      <p>fbmノイズをx方向に時間でスクロールさせ、明るい部分だけを緑・紫のグラデーションで着色する。上部ほど薄くすることで、カーテンが垂れ下がるような印象になる。</p>
+      <div class="use-case"><span class="swatch" style="background:#7be3a8"></span><span class="note">向いているサイト：旅行・北欧ブランド・夜間イベント</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="auroraCanvas"></canvas></div>
+          <div class="controls"><label>流速 <input id="auroraSpeed" type="range" min="5" max="100" value="30"></label></div>
+          <p class="status" id="auroraStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="auroraCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="aurora">実行 (Run)</button>
+            <button class="ghost" data-reset="aurora">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="dunes">
+      <div class="eyebrow">ギャラリー / Dunes</div>
+      <h2>砂丘・風紋：sinの重ね合わせで<br>等高線を作る</h2>
+      <p>複数のsin波を異なる周波数・位相で足し合わせ、mod()で等高線状に切り出す。地形やマップ表現の基本テクニックで、色を変えるだけで「布のシワ」「木目」にも転用できる。</p>
+      <div class="use-case"><span class="swatch" style="background:#c9a876"></span><span class="note">向いているサイト：旅行・砂漠観光地・アウトドアブランド</span></div>
+      <div class="demo-block">
+        <div class="demo-visual">
+          <div class="demo-stage"><canvas id="dunesCanvas"></canvas></div>
+          <div class="controls"><label>スケール <input id="dunesScale" type="range" min="5" max="40" value="14"></label></div>
+          <p class="status" id="dunesStatus"></p>
+        </div>
+        <div class="code-panel">
+          <textarea id="dunesCode" spellcheck="false"></textarea>
+          <div class="code-actions">
+            <button class="run" data-run="dunes">実行 (Run)</button>
+            <button class="ghost" data-reset="dunes">初期コードに戻す</button>
+          </div>
+        </div>
+      </div>
+      <div class="compare-row" style="margin-top:20px">
+        <div>
+          <div class="label">Canvas 2D版(参考)</div>
+          <div class="demo-stage"><canvas id="dunesCanvas2D"></canvas></div>
+        </div>
+        <div>
+          <div class="label">同じ発想をCanvasで書くと</div>
+          <pre>// 横方向にsin波を重ねた
+// 折れ線を何本も描く
+for (row of rows) {
+  for (x = 0; x &lt; w; x++) {
+    y = row.base + sin(x*f1)*a1
+                  + sin(x*f2+t)*a2;
+    lineTo(x, y);
+  }
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="choose">
+      <div class="eyebrow">活用 / How to choose</div>
+      <h2>業種から逆算して選ぶ</h2>
+      <table class="compare">
+        <tr><th>業種</th><th>おすすめ演出</th><th>実装難度</th><th>負荷の目安</th></tr>
+        <tr><td>プール・海・水族館</td><td>水</td><td>★★★</td><td>低〜中</td></tr>
+        <tr><td>キャンプ・アウトドア</td><td>炎</td><td>★★★</td><td>低〜中</td></tr>
+        <tr><td>宇宙・先端技術・ガジェット</td><td>雷</td><td>★★</td><td>低</td></tr>
+        <tr><td>植物園・公園・サステナ</td><td>草花</td><td>★★</td><td>低</td></tr>
+        <tr><td>スキー・冬季・ラグジュアリー</td><td>雪</td><td>★★</td><td>中</td></tr>
+        <tr><td>ウェルネス・瞑想・宿泊</td><td>霧・雲</td><td>★★★</td><td>低〜中</td></tr>
+        <tr><td>自動車・高級プロダクト</td><td>液体金属</td><td>★★</td><td>低</td></tr>
+        <tr><td>ゲーム・エンタメ</td><td>ひび割れ</td><td>★★★</td><td>中</td></tr>
+        <tr><td>旅行・北欧ブランド</td><td>オーロラ</td><td>★★★</td><td>低〜中</td></tr>
+        <tr><td>旅行・砂漠観光地</td><td>砂丘・風紋</td><td>★★</td><td>低</td></tr>
+      </table>
+      <p class="note">全部WebGLで統一したことで見た目の一貫性は上がるが、GPU依存が強いサイトになる点は留意。低スペック端末向けにCanvas版へフォールバックする設計(ひび割れ・砂丘のセクションで実演した通り)も選択肢に入れておくと安全。</p>
+    </section>
+
+    <section class="panel" id="react">
+      <div class="eyebrow">活用 / Implementation</div>
+      <h2>1つのコンポーネントに<br>抽象化する</h2>
+      <div class="flow">
+        <span>type: water/fire/lightning/flora/snow/fog/metal/cracks/aurora/dunes</span>
+      </div>
+      <pre>&lt;GenerativeBackdrop
+  type="fire"
+  intensity={100}
+  fallback="canvas"   // WebGL非対応時にCanvas版へ
+/&gt;
+
+// 内部では type ごとに事前定義した
+// フラグメントシェーダー文字列を切り替えるだけ。
+// DOM構造・WebGLセットアップ・resize処理は共通化できる。</pre>
+      <p>今回作った10種類は、頂点シェーダーとJS側のセットアップコードが全部共通。切り替わるのはフラグメントシェーダーの文字列と、uniformにわたすスライダーの値だけなので、コンポーネント化は難しくない。</p>
+    </section>
+
+    <section class="panel" id="next">
+      <div class="eyebrow">活用 / Next</div>
+      <h2>次にやること</h2>
+      <div class="grid cols3">
+        <div class="card"><h3>1. 共通ハーネス化</h3><p class="note">このページの「シェーダー実行エンジン」部分をそのままReactのカスタムフックに移植する。</p></div>
+        <div class="card"><h3>2. フォールバック設計</h3><p class="note">WebGL非対応・低スペック端末向けに、ひび割れ/砂丘で試したCanvas版を他の演出にも用意するか判断する。</p></div>
+        <div class="card"><h3>3. パレット差し替え</h3><p class="note">色の3〜4値を業種ごとに変えるだけで転用できる状態を確認済み。案件が来たら配色だけ差し替えて試す。</p></div>
+        <div class="card"><h3>4. モバイル負荷計測</h3><p class="note">実機で複数エフェクトを同時に動かした場合のfpsを計測し、同時稼働数の上限を決める。</p></div>
+        <div class="card"><h3>5. 実案件で1つ試す</h3><p class="note">今のプロダクトのローディング画面かヒーロー背景に、最も相性の良い1つを実装して反応を見る。</p></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* =========================================================
+   Sidebar navigation + active section highlight
+========================================================= */
+const navLinks=[...document.querySelectorAll(".nav-link")];
+const panels=[...document.querySelectorAll("section.panel")];
+const io=new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      const id=entry.target.id;
+      navLinks.forEach(l=>l.classList.toggle("active", l.getAttribute("href")==="#"+id));
+    }
+  });
+},{root:document.querySelector(".content"),threshold:0.4});
+panels.forEach(p=>io.observe(p));
+
+/* =========================================================
+   Shared canvas helper (2D)
+========================================================= */
+function setupCanvas2D(c){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const r=c.getBoundingClientRect();
+  c.width=Math.max(1,r.width*dpr);
+  c.height=Math.max(1,r.height*dpr);
+  const ctx=c.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w:r.width,h:r.height};
+}
+
+/* =========================================================
+   WebGL helpers
+========================================================= */
+const BASE_VS=`attribute vec2 a_position;
+void main(){gl_Position=vec4(a_position,0.0,1.0);}`;
+
+function compileShader(gl,type,src){
+  const s=gl.createShader(type);
+  gl.shaderSource(s,src);
+  gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){
+    const log=gl.getShaderInfoLog(s);
+    gl.deleteShader(s);
+    throw new Error(log||"shader compile failed");
+  }
+  return s;
+}
+function linkProgram(gl,vs,fs){
+  const p=gl.createProgram();
+  gl.attachShader(p,vs);gl.attachShader(p,fs);gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
+    const log=gl.getProgramInfoLog(p);
+    gl.deleteProgram(p);
+    throw new Error(log||"program link failed");
+  }
+  return p;
+}
+
+/* Generic live-editable shader demo harness.
+   cfg = { canvas, textarea, status, frag, uniforms:[{name, el, map}] } */
+function createShaderDemo(cfg){
+  const canvas=document.querySelector(cfg.canvas);
+  const textarea=document.querySelector(cfg.textarea);
+  const status=document.querySelector(cfg.status);
+  const gl=canvas.getContext("webgl",{antialias:false});
+  if(!gl){
+    if(status) status.textContent="WebGL非対応の環境です";
+    return {compileAndLink:()=>{}};
+  }
+  if(textarea) textarea.value=cfg.frag.trim();
+
+  let program=null, posLoc=null, resLoc=null, timeLoc=null, extraLocs={};
+  let start=performance.now();
+  let visible=false;
+
+  const buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+
+  function compileAndLink(fragSrc){
+    try{
+      const vs=compileShader(gl,gl.VERTEX_SHADER,BASE_VS);
+      const fs=compileShader(gl,gl.FRAGMENT_SHADER,fragSrc);
+      const prog=linkProgram(gl,vs,fs);
+      program=prog;
+      posLoc=gl.getAttribLocation(prog,"a_position");
+      resLoc=gl.getUniformLocation(prog,"u_resolution");
+      timeLoc=gl.getUniformLocation(prog,"u_time");
+      extraLocs={};
+      (cfg.uniforms||[]).forEach(u=>{ extraLocs[u.name]=gl.getUniformLocation(prog,u.name); });
+      if(status) status.textContent="コンパイル成功";
+      return true;
+    }catch(e){
+      if(status) status.textContent="エラー: "+e.message;
+      return false;
+    }
+  }
+
+  function resize(){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    const r=canvas.getBoundingClientRect();
+    canvas.width=Math.max(1,r.width*dpr);
+    canvas.height=Math.max(1,r.height*dpr);
+    gl.viewport(0,0,canvas.width,canvas.height);
+  }
+
+  function frame(now){
+    if(visible && program){
+      resize();
+      gl.useProgram(program);
+      gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+      gl.enableVertexAttribArray(posLoc);
+      gl.vertexAttribPointer(posLoc,2,gl.FLOAT,false,0,0);
+      gl.uniform2f(resLoc,canvas.width,canvas.height);
+      gl.uniform1f(timeLoc,(now-start)/1000);
+      (cfg.uniforms||[]).forEach(u=>{
+        const el=document.querySelector(u.el);
+        if(!el) return;
+        const loc=extraLocs[u.name];
+        if(!loc) return;
+        const raw=+el.value;
+        gl.uniform1f(loc, u.map?u.map(raw):raw);
+      });
+      gl.drawArrays(gl.TRIANGLES,0,6);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  const observer=new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ visible=e.isIntersecting; if(visible) resize(); });
+  },{threshold:0.05});
+  observer.observe(canvas);
+
+  compileAndLink(cfg.frag.trim());
+  requestAnimationFrame(frame);
+
+  return {
+    compileAndLink:(src)=>{ start=performance.now(); return compileAndLink(src); }
+  };
+}
+
+/* =========================================================
+   Fragment shader sources (all self-contained: hash/noise/fbm
+   are re-declared inside each shader so editing one never
+   breaks another).
+========================================================= */
+const NOISE_LIB=`
+float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
+float noise(vec2 p){
+  vec2 i=floor(p), f=fract(p);
+  float a=hash(i), b=hash(i+vec2(1.0,0.0)), c=hash(i+vec2(0.0,1.0)), d=hash(i+vec2(1.0,1.0));
+  vec2 u=f*f*(3.0-2.0*f);
+  return mix(a,b,u.x)+(c-a)*u.y*(1.0-u.x)+(d-b)*u.x*u.y;
+}
+float fbm(vec2 p){
+  float v=0.0, amp=0.5;
+  for(int i=0;i<5;i++){ v+=amp*noise(p); p*=2.0; amp*=0.5; }
+  return v;
+}`;
+
+const GLINTRO_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_speed;
+
+void main(){
+  vec2 uv = gl_FragCoord.xy / u_resolution;
+  vec2 p = uv - 0.5;
+  p.x *= u_resolution.x / u_resolution.y;
+
+  float t = u_time * u_speed;
+  float d = length(p);
+  d += sin(p.x*12.0 + t)*0.025;
+
+  float alpha = 1.0 - smoothstep(0.20,0.205,d);
+  gl_FragColor = vec4(vec3(alpha),1.0);
+}`;
+
+const WATER_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_speed;
+
+void main(){
+  vec2 uv = gl_FragCoord.xy/u_resolution;
+  vec2 p = uv*2.0-1.0;
+  p.x *= u_resolution.x/u_resolution.y;
+  float t = u_time*u_speed;
+  float c = 0.0;
+  for(int i=1;i<=3;i++){
+    float fi=float(i);
+    c += sin(p.x*fi*4.0 + t*0.6 + p.y*2.0)*(0.5/fi);
+    c += sin(p.y*fi*3.0 - t*0.4 + p.x*1.5)*(0.5/fi);
+  }
+  float wave = c*0.5+0.5;
+  vec3 deep = vec3(0.02,0.08,0.16);
+  vec3 shallow = vec3(0.08,0.42,0.52);
+  vec3 foam = vec3(0.78,0.93,0.96);
+  vec3 col = mix(deep,shallow,wave);
+  float hi = smoothstep(0.72,0.95,wave);
+  col = mix(col,foam,hi*0.55);
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const FIRE_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_intensity;
+${NOISE_LIB}
+void main(){
+  vec2 uv = gl_FragCoord.xy/u_resolution;
+  vec2 p = uv;
+  p.y -= u_time*0.6;
+  p.x += sin(uv.y*6.0+u_time*0.5)*0.05;
+  float n = fbm(p*vec2(3.0,5.0)*(0.6+u_intensity*0.6));
+  float flame = n - uv.y*1.3;
+  flame = smoothstep(0.0,0.55,flame);
+  vec3 col = mix(vec3(0.02,0.0,0.0), vec3(0.9,0.2,0.02), flame);
+  col = mix(col, vec3(1.0,0.85,0.3), pow(flame,4.0));
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const LIGHTNING_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_freq;
+${NOISE_LIB}
+void main(){
+  vec2 uv = gl_FragCoord.xy/u_resolution;
+  float seed = floor(u_time*u_freq);
+  float x = 0.5 + (noise(vec2(seed,1.0))-0.5)*0.2;
+  float offset = (noise(vec2(uv.y*8.0, seed))-0.5)*0.3;
+  float d = abs(uv.x - x - offset);
+  float glow = 0.006/(d+0.004);
+  float flash = fract(u_time*u_freq);
+  float alpha = smoothstep(1.0,0.0,flash*2.5);
+  vec3 col = vec3(0.55,0.78,1.0)*glow*alpha;
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const FLORA_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_petals;
+
+void main(){
+  vec2 uv = (gl_FragCoord.xy/u_resolution)*2.0-1.0;
+  uv.x *= u_resolution.x/u_resolution.y;
+  float a = atan(uv.y,uv.x);
+  float r = length(uv);
+  float grow = fract(u_time*0.15);
+  float petal = 0.25 + 0.18*cos(a*u_petals);
+  petal *= smoothstep(0.0,1.0,grow*1.3);
+  float shape = smoothstep(petal,petal-0.01,r);
+  float ring = smoothstep(0.02,0.0,abs(r-petal*0.4));
+  vec3 col = mix(vec3(0.03,0.05,0.03), vec3(0.4,0.85,0.35), shape);
+  col = mix(col, vec3(0.95,0.9,0.55), ring*0.8);
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const SNOW_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_density;
+float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
+
+void main(){
+  vec2 uv = gl_FragCoord.xy/u_resolution;
+  uv.x *= u_resolution.x/u_resolution.y;
+  vec3 col = vec3(0.03,0.04,0.07);
+  for(int i=0;i<3;i++){
+    float fi = float(i);
+    float scale = 6.0 + fi*8.0*u_density;
+    vec2 p = uv*scale;
+    p.y += u_time*(0.3+fi*0.25);
+    vec2 cell = floor(p);
+    vec2 f = fract(p);
+    float h = hash(cell+fi*17.0);
+    vec2 center = vec2(hash(cell+vec2(1.1,0.0)+fi), hash(cell+vec2(2.3,0.0)+fi));
+    float d = distance(f, center);
+    float dotv = smoothstep(0.10,0.0,d);
+    col += vec3(0.9,0.95,1.0) * dotv * (0.5+0.5*h) * 0.6;
+  }
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const FOG_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_density;
+${NOISE_LIB}
+void main(){
+  vec2 uv = gl_FragCoord.xy/u_resolution;
+  vec2 p = uv*3.0;
+  p.x += u_time*0.05;
+  float n = fbm(p + fbm(p+u_time*0.02)*u_density);
+  vec3 base = vec3(0.08,0.10,0.14);
+  vec3 mistCol = vec3(0.75,0.78,0.85);
+  vec3 col = mix(base, mistCol, n*0.8);
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const METAL_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_shine;
+${NOISE_LIB}
+void main(){
+  vec2 uv = gl_FragCoord.xy/u_resolution;
+  vec2 p = uv*3.0;
+  float n1 = noise(p+u_time*0.3);
+  float n2 = noise(p*1.7 - u_time*0.2);
+  float band = sin((uv.x+n1*0.4-n2*0.3)*20.0)*0.5+0.5;
+  band = pow(band, u_shine);
+  vec3 dark = vec3(0.12,0.13,0.15);
+  vec3 light = vec3(0.9,0.92,0.95);
+  vec3 col = mix(dark,light,band);
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const CRACKS_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_speed;
+vec2 hash2(vec2 p){
+  p = vec2(dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)));
+  return fract(sin(p)*43758.5453123);
+}
+void main(){
+  vec2 uv = gl_FragCoord.xy/u_resolution;
+  float aspect = u_resolution.x/u_resolution.y;
+  uv.x *= aspect;
+  vec2 p = uv*8.0;
+  vec2 ip = floor(p);
+  vec2 fp = fract(p);
+  float minDist = 8.0;
+  for(int y=-1;y<=1;y++){
+    for(int x=-1;x<=1;x++){
+      vec2 g = vec2(float(x),float(y));
+      vec2 o = hash2(ip+g);
+      vec2 r = g+o-fp;
+      float d = length(r);
+      minDist = min(minDist,d);
+    }
+  }
+  float crack = smoothstep(0.03,0.0,minDist-0.02);
+  float impact = distance(uv, vec2(aspect*0.5,0.5));
+  float front = mod(u_time*u_speed*0.3, 1.2);
+  float reveal = smoothstep(front,front-0.15,impact);
+  vec3 base = vec3(0.06,0.06,0.07);
+  vec3 col = mix(base, vec3(1.0,0.85,0.5), crack*reveal);
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const AURORA_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_speed;
+${NOISE_LIB}
+void main(){
+  vec2 uv = gl_FragCoord.xy/u_resolution;
+  vec2 p = vec2(uv.x*3.0 + u_time*u_speed*0.15, uv.y*1.5);
+  float n = fbm(p);
+  float band = smoothstep(0.3,0.9,n) * (1.0-uv.y*0.6);
+  vec3 base = vec3(0.01,0.01,0.03);
+  vec3 green = vec3(0.2,0.9,0.55);
+  vec3 purple = vec3(0.55,0.3,0.85);
+  vec3 col = base + green*band*0.8 + purple*band*noise(p*1.3)*0.5;
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+const DUNES_FRAG=`precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_scale;
+
+void main(){
+  vec2 uv = gl_FragCoord.xy/u_resolution;
+  vec2 p = uv*u_scale;
+  float c = 0.0;
+  c += sin(p.x*3.0 + sin(p.y*2.0)*1.5);
+  c += sin(p.x*1.3 - p.y*2.2 + u_time*0.1)*0.6;
+  c = abs(c)*0.5;
+  float ridge = smoothstep(0.0,0.06,0.06-mod(c,0.3));
+  vec3 sand1 = vec3(0.75,0.62,0.4);
+  vec3 sand2 = vec3(0.55,0.42,0.26);
+  vec3 col = mix(sand2,sand1, c*0.6+0.3);
+  col = mix(col, sand1*1.15, ridge*0.5);
+  gl_FragColor = vec4(col,1.0);
+}`;
+
+/* =========================================================
+   Register all shader demos
+========================================================= */
+const DEMOS=[
+  {id:"glintro", canvas:"#glIntroCanvas", textarea:"#glIntroCode", status:"#glIntroStatus", frag:GLINTRO_FRAG,
+    uniforms:[{name:"u_speed", el:"#glIntroSpeed", map:v=>v/40}]},
+  {id:"water", canvas:"#waterCanvas", textarea:"#waterCode", status:"#waterStatus", frag:WATER_FRAG,
+    uniforms:[{name:"u_speed", el:"#waterSpeed", map:v=>v/50}]},
+  {id:"fire", canvas:"#fireCanvas", textarea:"#fireCode", status:"#fireStatus", frag:FIRE_FRAG,
+    uniforms:[{name:"u_intensity", el:"#fireIntensity", map:v=>v/100}]},
+  {id:"lightning", canvas:"#lightningCanvas", textarea:"#lightningCode", status:"#lightningStatus", frag:LIGHTNING_FRAG,
+    uniforms:[{name:"u_freq", el:"#lightningFreq", map:v=>v/40}]},
+  {id:"flora", canvas:"#floraCanvas", textarea:"#floraCode", status:"#floraStatus", frag:FLORA_FRAG,
+    uniforms:[{name:"u_petals", el:"#floraPetals", map:v=>v}]},
+  {id:"snow", canvas:"#snowCanvas", textarea:"#snowCode", status:"#snowStatus", frag:SNOW_FRAG,
+    uniforms:[{name:"u_density", el:"#snowDensity", map:v=>v/70}]},
+  {id:"fog", canvas:"#fogCanvas", textarea:"#fogCode", status:"#fogStatus", frag:FOG_FRAG,
+    uniforms:[{name:"u_density", el:"#fogDensity", map:v=>v/50}]},
+  {id:"metal", canvas:"#metalCanvas", textarea:"#metalCode", status:"#metalStatus", frag:METAL_FRAG,
+    uniforms:[{name:"u_shine", el:"#metalShine", map:v=>v/10}]},
+  {id:"cracks", canvas:"#cracksCanvas", textarea:"#cracksCode", status:"#cracksStatus", frag:CRACKS_FRAG,
+    uniforms:[{name:"u_speed", el:"#cracksSpeed", map:v=>v/50}]},
+  {id:"aurora", canvas:"#auroraCanvas", textarea:"#auroraCode", status:"#auroraStatus", frag:AURORA_FRAG,
+    uniforms:[{name:"u_speed", el:"#auroraSpeed", map:v=>v/100}]},
+  {id:"dunes", canvas:"#dunesCanvas", textarea:"#dunesCode", status:"#dunesStatus", frag:DUNES_FRAG,
+    uniforms:[{name:"u_scale", el:"#dunesScale", map:v=>v}]},
+];
+const instances={};
+DEMOS.forEach(cfg=>{ instances[cfg.id]=createShaderDemo(cfg); });
+
+document.querySelectorAll("[data-run]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const id=btn.getAttribute("data-run");
+    const cfg=DEMOS.find(d=>d.id===id);
+    const ta=document.querySelector(cfg.textarea);
+    instances[id].compileAndLink(ta.value);
+  });
+});
+document.querySelectorAll("[data-reset]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const id=btn.getAttribute("data-reset");
+    const cfg=DEMOS.find(d=>d.id===id);
+    const ta=document.querySelector(cfg.textarea);
+    ta.value=cfg.frag.trim();
+    instances[id].compileAndLink(ta.value);
+  });
+});
+
+/* =========================================================
+   Canvas 2D comparison versions (cracks / dunes)
+========================================================= */
+function initCracksCanvas2D(){
+  const canvas=document.querySelector("#cracksCanvas2D");
+  const ctx=canvas.getContext("2d");
+  let lines=[];
+  function build(w,h){
+    lines=[];
+    const cx=w/2, cy=h*0.15;
+    function branch(x1,y1,ang,len,depth){
+      if(depth<=0 || len<3) return;
+      const x2=x1+Math.cos(ang)*len;
+      const y2=y1+Math.sin(ang)*len;
+      lines.push({x1,y1,x2,y2,dist:Math.hypot(x2-cx,y2-cy)});
+      branch(x2,y2,ang+(Math.random()-0.5)*0.9,len*0.72,depth-1);
+      if(Math.random()<0.5) branch(x2,y2,ang+(Math.random()-0.5)*1.4,len*0.55,depth-1);
+    }
+    for(let i=0;i<7;i++){
+      branch(cx,cy,Math.PI/2+(Math.random()-0.5)*1.6, Math.max(w,h)*0.18, 6);
+    }
+  }
+  let start=performance.now();
+  let visible=false;
+  function loop(now){
+    if(visible){
+      const {ctx:c,w,h}=setupCanvas2D(canvas);
+      if(lines.length===0) build(w,h);
+      c.clearRect(0,0,w,h);
+      c.fillStyle="#0b0c0f";
+      c.fillRect(0,0,w,h);
+      const maxDist=Math.max(w,h)*0.3;
+      const front=((now-start)/1000*0.25)%1.3*maxDist;
+      c.strokeStyle="rgba(242,193,78,0.85)";
+      c.lineWidth=1.3;
+      lines.forEach(l=>{
+        if(l.dist<front){
+          c.beginPath();c.moveTo(l.x1,l.y1);c.lineTo(l.x2,l.y2);c.stroke();
+        }
+      });
+    }
+    requestAnimationFrame(loop);
+  }
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{visible=e.isIntersecting;}),{threshold:0.05});
+  obs.observe(canvas);
+  requestAnimationFrame(loop);
+}
+
+function initDunesCanvas2D(){
+  const canvas=document.querySelector("#dunesCanvas2D");
+  const ctx=canvas.getContext("2d");
+  let visible=false;
+  function loop(){
+    if(visible){
+      const {ctx:c,w,h}=setupCanvas2D(canvas);
+      const t=performance.now()*0.0006;
+      c.fillStyle="#6b5230";
+      c.fillRect(0,0,w,h);
+      c.strokeStyle="rgba(201,168,118,0.8)";
+      c.lineWidth=1.2;
+      const rows=10;
+      for(let i=0;i<rows;i++){
+        const base=(i/rows)*h;
+        c.beginPath();
+        for(let x=0;x<=w;x+=4){
+          const y=base + Math.sin(x*0.02+i*0.6)*10 + Math.sin(x*0.05-t*2+i)*6;
+          if(x===0) c.moveTo(x,y); else c.lineTo(x,y);
+        }
+        c.stroke();
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{visible=e.isIntersecting;}),{threshold:0.05});
+  obs.observe(canvas);
+  requestAnimationFrame(loop);
+}
+initCracksCanvas2D();
+initDunesCanvas2D();
+
+/* =========================================================
+   Pure CSS demo
+========================================================= */
+const cssRange=document.querySelector("#cssRange");
+const cssLogo=document.querySelector("#cssLogo");
+if(cssRange){
+  cssRange.oninput=()=>{ cssLogo.style.transform=`rotate(${cssRange.value}deg)`; };
+}
+const CSS_DEFAULT=`.css-logo i {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #f4f4f5;
+  border-radius: 50%;
+  position: absolute;
+}
+.css-logo i:nth-child(1) { transform: translateY(-30px); }
+.css-logo i:nth-child(2) { transform: translate(26px,-15px); }
+.css-logo i:nth-child(3) { transform: translate(26px,15px); }
+.css-logo i:nth-child(4) { transform: translateY(30px); }
+.css-logo i:nth-child(5) { transform: translate(-26px,15px); }
+.css-logo i:nth-child(6) { transform: translate(-26px,-15px); }`;
+const cssCodeEl=document.querySelector("#cssCode");
+const cssStatusEl=document.querySelector("#cssStatus");
+let liveStyleEl=document.createElement("style");
+document.head.appendChild(liveStyleEl);
+if(cssCodeEl) cssCodeEl.value=CSS_DEFAULT;
+function applyCss(){
+  try{
+    liveStyleEl.textContent=cssCodeEl.value;
+    if(cssStatusEl) cssStatusEl.textContent="適用しました";
+  }catch(e){
+    if(cssStatusEl) cssStatusEl.textContent="エラー: "+e.message;
+  }
+}
+document.querySelector("#cssRun").onclick=applyCss;
+document.querySelector("#cssReset").onclick=()=>{ cssCodeEl.value=CSS_DEFAULT; applyCss(); };
+applyCss();
+
+/* =========================================================
+   Canvas + JS demo (editable draw function)
+========================================================= */
+const CANVAS_DEFAULT=`// ctx, w, h, t (経過秒) が使える
+const cx = w/2, cy = h/2;
+ctx.strokeStyle = "#f4f4f5";
+ctx.lineWidth = 1;
+for (let i = 0; i < 220; i++) {
+  const a = i * Math.PI * 2 / 220 + t*0.1;
+  const r1 = Math.min(w,h)*0.22;
+  const r2 = Math.min(w,h)*0.42 + Math.sin(i*0.3+t)*10;
+  const x1 = cx + Math.cos(a)*r1, y1 = cy + Math.sin(a)*r1;
+  const x2 = cx + Math.cos(a+1.15)*r2, y2 = cy + Math.sin(a+1.15)*r2;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+}`;
+(function initCanvasJsDemo(){
+  const canvas=document.querySelector("#canvasDemo");
+  const textarea=document.querySelector("#canvasCode");
+  const status=document.querySelector("#canvasStatus");
+  if(textarea) textarea.value=CANVAS_DEFAULT;
+  let drawFn=null;
+  let start=performance.now();
+  let visible=false;
+  function compile(src){
+    try{
+      drawFn=new Function("ctx","w","h","t",src);
+      if(status) status.textContent="実行中";
+      return true;
+    }catch(e){
+      if(status) status.textContent="エラー: "+e.message;
+      return false;
+    }
+  }
+  function loop(now){
+    if(visible && drawFn){
+      const {ctx,w,h}=setupCanvas2D(canvas);
+      ctx.clearRect(0,0,w,h);
+      try{
+        drawFn(ctx,w,h,(now-start)/1000);
+      }catch(e){
+        if(status) status.textContent="実行時エラー: "+e.message;
+        drawFn=null;
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{visible=e.isIntersecting;}),{threshold:0.05});
+  obs.observe(canvas);
+  compile(CANVAS_DEFAULT);
+  requestAnimationFrame(loop);
+  document.querySelector("#canvasRunBtn").onclick=()=>{ start=performance.now(); compile(textarea.value); };
+  document.querySelector("#canvasApply").onclick=()=>{ start=performance.now(); compile(textarea.value); };
+  document.querySelector("#canvasReset").onclick=()=>{ textarea.value=CANVAS_DEFAULT; start=performance.now(); compile(CANVAS_DEFAULT); };
+})();
+
+/* =========================================================
+   Hero animation
+========================================================= */
+(function hero(){
+  const c=document.querySelector("#heroCanvas");
+  let visible=true;
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{visible=e.isIntersecting;}),{threshold:0.05});
+  obs.observe(c);
+  function frame(){
+    if(visible){
+      const {ctx,w,h}=setupCanvas2D(c);
+      const cx=w/2, cy=h/2, t=performance.now()*0.001;
+      ctx.clearRect(0,0,w,h);
+      ctx.strokeStyle="rgba(244,244,245,.55)";
+      ctx.lineWidth=1;
+      for(let i=0;i<140;i++){
+        const a=i*Math.PI*2/140+t*0.12;
+        const r1=Math.min(w,h)*0.15+Math.sin(i*0.7+t)*10;
+        const r2=Math.min(w,h)*0.34+Math.sin(i*0.31-t)*18;
+        ctx.beginPath();
+        ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+        ctx.lineTo(cx+Math.cos(a+1.3)*r2,cy+Math.sin(a+1.3)*r2);
+        ctx.stroke();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
